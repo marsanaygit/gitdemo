@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>植物陣取り テストプレイ台</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#edf0e4;--panel:#f8f9f2;--ink:#1c2a20;--muted:#5f6f63;--line:#c7d0bd;
+  --accent:#2d6a4f;--accent-ink:#fff;--warn:#b4531a;--hl:#ff5d2a;
+  --v1:#eef0dc;--v2:#dfe8b8;--v3:#c6dc94;--v4:#a6c974;--v5:#86b356;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#141b16;--panel:#1d2720;--ink:#e6ece1;--muted:#93a498;--line:#324036;
+    --accent:#7cc79c;--accent-ink:#0f1a13;--warn:#e9955a;--hl:#ff8a5c;
+    --v1:#2a3126;--v2:#34432a;--v3:#3f5630;--v4:#4c6d38;--v5:#5a8541;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141b16;--panel:#1d2720;--ink:#e6ece1;--muted:#93a498;--line:#324036;
+  --accent:#7cc79c;--accent-ink:#0f1a13;--warn:#e9955a;--hl:#ff8a5c;
+  --v1:#2a3126;--v2:#34432a;--v3:#3f5630;--v4:#4c6d38;--v5:#5a8541;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothic ProN','Noto Sans JP',system-ui,sans-serif;font-size:14px;line-height:1.55}
+h1,h2,h3{font-family:'Shippori Mincho B1','Hiragino Mincho ProN','Noto Serif JP',serif;margin:0;line-height:1.3}
+h1{font-size:22px}h2{font-size:17px}h3{font-size:15px}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:1080px;margin:0 auto;padding:10px 10px 40px}
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.top .ttl{flex:1;min-width:150px}
+.top .sub{color:var(--muted);font-size:12px}
+.btn{min-height:44px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.btn.sm{min-height:36px;padding:4px 10px;font-size:13px}
+.btn:focus-visible,.item:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
+.grid{display:grid;gap:10px;grid-template-columns:1fr}
+@media(min-width:900px){.grid{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.card h2,.card h3{margin-bottom:6px}
+.mut{color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:4px 0}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);background:var(--bg);font-size:13px}
+.chip.cur{border-color:var(--pc);box-shadow:inset 0 0 0 1px var(--pc);font-weight:700}
+#board{width:100%;height:auto;display:block;touch-action:manipulation}
+.cell polygon{stroke:var(--panel);stroke-width:1}
+.v1{fill:var(--v1)}.v2{fill:var(--v2)}.v3{fill:var(--v3)}.v4{fill:var(--v4)}.v5{fill:var(--v5)}
+.tg{font-size:8px;text-anchor:middle;fill:var(--ink);opacity:.5;pointer-events:none}
+.hl{fill:var(--hl);fill-opacity:.3;stroke:var(--hl);stroke-width:2.5;pointer-events:none}
+.cell.sel{cursor:pointer}
+.seedn{font-size:9px;font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.pn{font-size:9px;font-weight:800;text-anchor:middle;dominant-baseline:central;fill:#fff;pointer-events:none}
+.an{fill:#22262a;stroke:#fff;stroke-width:1}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:4px;border:1px solid var(--line)}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.slot{text-align:left;min-height:66px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+.slot b{display:block}
+.slot span{font-size:12px;color:var(--muted)}
+.slot:disabled{opacity:.5}
+.pc{border-left:5px solid var(--pc);padding-left:10px}
+.pc.cur{background:color-mix(in srgb,var(--pc) 8%,var(--panel))}
+.pc-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pc-h .sc{margin-left:auto;font-weight:800;font-size:16px}
+.mk{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mk div{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--bg);font-size:13px}
+.log{max-height:220px;overflow:auto;font-size:12.5px;color:var(--muted)}
+.log div{padding:2px 0;border-bottom:1px dashed var(--line)}
+#sheetWrap{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+#sheetWrap[hidden]{display:none}
+.sheet{width:100%;max-width:560px;background:var(--panel);border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));max-height:80%;overflow:auto}
+.sheet h3{margin-bottom:8px}
+.item{display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:8px;border-radius:10px;border:1px solid var(--line);background:var(--bg)}
+.item span{display:block;font-size:12px;color:var(--muted)}
+.item:disabled{opacity:.45}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 8px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:10px;z-index:20;max-width:90%;font-size:13px}
+#toast[hidden]{display:none}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+.scroll{overflow-x:auto}
+fieldset{border:1px solid var(--line);border-radius:10px;margin:0 0 10px;padding:8px 10px}
+legend{padding:0 6px;font-weight:700}
+select,input[type=number]{font:inherit;min-height:40px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+input[type=number]{width:72px}
+label{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+details{margin:6px 0}
+summary{cursor:pointer;font-weight:700;min-height:32px}
+ul.rules{margin:6px 0 0;padding-left:18px;font-size:13px}
+.seg{display:flex;gap:6px}
+.seg .btn{flex:1}
+.seg .btn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app"></div></div>
+<div id="sheetWrap" hidden><div class="sheet" id="sheet"></div></div>
+<div id="toast" hidden></div>
+<script>
+'use strict';
+/*ENGINE_START*/
+const DIRS=[[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+const DIRN=['東','北東','北西','西','南西','南東'];
+const DIRANG=[0,-60,-120,180,120,60];
+const PLANTS={
+  balsam:{id:'balsam',n:'ホウセンカ',t:'自力散布',c:'#d6336c',mode:'wither',d:'実が弾けて種を飛ばす（花は枯れる）'},
+  dandelion:{id:'dandelion',n:'たんぽぽ',t:'風散布',c:'#d98200',mode:'wither',d:'綿毛が風に乗って種を運ぶ（花は枯れる）'},
+  oak:{id:'oak',n:'カシ',t:'動物散布',c:'#8d5a2b',mode:'keep',d:'動物が種を運ぶ（栄養を払えば花は枯れない）'},
+  bamboo:{id:'bamboo',n:'タケノコ',t:'地下茎（栄養繁殖）',c:'#0f9d8a',mode:'regress',d:'地下茎で周囲に広がる（散布すると花は芽に戻る）'},
+  pitcher:{id:'pitcher',n:'ウツボカズラ',t:'食虫植物（攻撃型）',c:'#e03131',mode:'keep',d:'虫を捕らえる攻撃型。近くに種を落とす（栄養を払えば花は枯れない）'},
+  coconut:{id:'coconut',n:'ココヤシ',t:'水散布（遠距離）',c:'#1c7ed6',mode:'wither',d:'海流に乗って遠くへ種を運ぶ（花は枯れる）'},
+  violet:{id:'violet',n:'スミレ',t:'蟻散布（守り型）',c:'#7048e8',mode:'keep',d:'アリが運び、種は守り付きで着地する（栄養を払えば花は枯れない）'}
+};
+const FORMS={
+  balsam:[
+    {n:'ホウセンカ（苗）',seeds:2,range:2,d:'距離2以内に種2つ'},
+    {n:'ホウセンカ（実る）',seeds:2,range:3,d:'距離3以内に種2つ'},
+    {n:'ホウセンカ（群生）',seeds:3,range:3,d:'距離3以内に種3つ。最終形ボーナス「群生」'}],
+  dandelion:[
+    {n:'たんぽぽ（ロゼット）',seeds:3,d:'風の中心点の周囲1マスに種3つ'},
+    {n:'たんぽぽ（綿毛）',seeds:4,d:'種4つ'},
+    {n:'たんぽぽ（野原）',seeds:4,fx:{dand:0},d:'種4つ。「風を読む」が無料。最終形ボーナス「風の道」'}],
+  oak:[
+    {n:'カシ（若木）',seeds:1,d:'動物の歩数以内に種1つ（枯れずに散布：栄養1）'},
+    {n:'カシ（どんぐり）',seeds:2,d:'動物の歩数以内に種2つ'},
+    {n:'カシ（大樹）',seeds:2,keepCost:0,fx:{reroll:0,pick:1},d:'種2つ。枯れずに散布が無料、動物の引き直しが無料・選ぶは栄養1。最終形ボーナス「花の輪」'}],
+  bamboo:[
+    {n:'タケノコ',seeds:2,range:1,d:'隣接マスに種2つ（散布すると花は芽に戻る）。急成長は栄養2'},
+    {n:'若竹',seeds:3,range:1,fx:{bamboo:1},d:'隣接マスに種3つ。急成長は栄養1'},
+    {n:'竹林',seeds:3,range:2,fx:{bamboo:0},d:'距離2以内に種3つ。急成長が無料。最終形ボーナス「竹林」'}],
+  pitcher:[
+    {n:'ウツボカズラ（若苗）',seeds:1,range:2,atk:1,predRange:2,d:'距離2以内に種1つ（枯れずに散布：栄養1）。攻撃カードの射程+1。固有効果「捕食」'},
+    {n:'ウツボカズラ（捕虫袋）',seeds:2,range:2,atk:1,predRange:2,fx:{pred:1},d:'種2つ。攻撃カードの射程+1。「捕食」が栄養1'},
+    {n:'ウツボカズラ（大型の罠）',seeds:2,range:3,atk:2,predRange:3,keepCost:0,fx:{pred:1},d:'距離3以内に種2つ、枯れずに散布が無料。攻撃カードの射程+2。「捕食」の射程3・花にも1段階ダメージ。最終形ボーナス「包囲網」'}],
+  coconut:[
+    {n:'ココナッツ',seeds:2,minDist:3,d:'元の花から距離3以上離れた空きマスなら、どこでも種2つ（遠くへ運ばれる）'},
+    {n:'ココヤシ（若木）',seeds:2,minDist:3,fx:{tide:0},d:'距離3以上離れた空きマスに種2つ。「潮に乗る」が無料'},
+    {n:'ココヤシ（浜）',seeds:2,minDist:3,fx:{tide:0},d:'種2つ。「潮に乗る」が無料。最終形ボーナス「離れ島」'}],
+  violet:[
+    {n:'スミレ（つぼみ）',seeds:1,range:2,guard:true,d:'距離2以内に種1つ（枯れずに散布：栄養1）。種は守り付きで着地。固有効果「アリの巣」'},
+    {n:'スミレ（咲き始め）',seeds:2,range:2,guard:true,d:'距離2以内に守り付きの種を2つ'},
+    {n:'スミレ（花畑）',seeds:2,range:3,guard:true,keepCost:0,fx:{nest:0},d:'距離3以内に守り付きの種を2つ。枯れずに散布が無料、「アリの巣」も無料。最終形ボーナス「花畑」'}]
+};
+const BONUS={
+  balsam:{n:'群生',d:'隣り合う花が3輪連なると+2、5輪で+3、7輪以上で+4'},
+  dandelion:{n:'風の道',d:'一直線に隣り合って並ぶ花が3輪で+2、4輪で+3、5輪以上で+4'},
+  oak:{n:'花の輪',d:'あるマスの周囲6マスのうち3マスが自分の花なら+2、4マスで+3、5マス以上で+4'},
+  bamboo:{n:'竹林',d:'隣り合う花の連なりが、中心からの距離の違う土地を3種類にまたぐと+2、4種類以上で+4'},
+  pitcher:{n:'包囲網',d:'自分の花に隣り合う相手の株（種・芽・花）が1つにつき+1（最大+4）'},
+  coconut:{n:'離れ島',d:'他の自分の花と隣り合っていない（孤立した）花1つにつき+1（最大+4）'},
+  violet:{n:'花畑',d:'守り付きの自分の花が4輪で+2、6輪で+3、8輪以上で+4'}
+};
+const modeText=p=>{const m=PLANTS[p.plant].mode;return m==='wither'?'花は枯れる':m==='keep'?'枯れずに（栄養'+keepCost(p)+'）':'花は芽に戻る';};
+const STAGE=['','種','芽','花'];
+const CARDS={
+  aphid:{id:'aphid',n:'アブラムシ',kind:'虫',deck:'insect',d:'相手の植物1つを1段階退化させる（種は消滅）',tg:'enemy'},
+  caterpillar:{id:'caterpillar',n:'イモムシ',kind:'虫',deck:'insect',d:'相手の種か芽を1つ枯らす',tg:'enemyLow'},
+  ladybug:{id:'ladybug',n:'テントウムシ',kind:'虫',deck:'insect',d:'自分の植物1つに守りを付ける（次のダメージを1回無効化）',tg:'own'},
+  bee:{id:'bee',n:'ミツバチ',kind:'虫',deck:'insect',d:'栄養+3',tg:null},
+  butterfly:{id:'butterfly',n:'チョウ',kind:'虫',deck:'insect',d:'自分の種か芽を1つ、1段階成長させる（主行動とは別）',tg:'ownGrow'},
+  worm:{id:'worm',n:'ミミズ',kind:'動物',deck:'animal',steps:1,d:'自分の種か芽を1つ選び、その株と隣接する自分の種・芽をまとめて1段階成長させる',tg:'ownGrow'},
+  dog:{id:'dog',n:'番犬',kind:'動物',deck:'animal',steps:2,d:'自分の植物1つと、隣接する自分の植物に守りを付ける',tg:'own'},
+  squirrel:{id:'squirrel',n:'リス',kind:'動物',deck:'animal',steps:3,d:'栄養+2',tg:null},
+  deer:{id:'deer',n:'シカ',kind:'動物',deck:'animal',steps:3,d:'相手の植物1つを2段階退化させる',tg:'enemy'},
+  boar:{id:'boar',n:'イノシシ',kind:'動物',deck:'animal',steps:4,d:'相手の植物1つを掘り返して枯らす',tg:'enemy'},
+  bear:{id:'bear',n:'クマ',kind:'動物',deck:'animal',steps:5,d:'相手の植物1つを枯らし、その隣の相手の植物も1段階退化させる',tg:'enemy'}
+};
+const DECKLIST={
+  insect:[['aphid',4],['caterpillar',3],['ladybug',4],['bee',2],['butterfly',3]],
+  animal:[['worm',2],['dog',3],['squirrel',2],['deer',3],['boar',2],['bear',1]]
+};
+const key=(q,r)=>q+','+r;
+const P=k=>k.split(',').map(Number);
+const inB=(q,r)=>Math.max(Math.abs(q),Math.abs(r),Math.abs(q+r))<=4;
+const dist=(a,b)=>{const[x,y]=P(a),[u,v]=P(b);const dq=x-u,dr=y-v;return Math.max(Math.abs(dq),Math.abs(dr),Math.abs(dq+dr));};
+const neighbors=k=>{const[q,r]=P(k);return DIRS.map(d=>[q+d[0],r+d[1]]).filter(c=>inB(c[0],c[1])).map(c=>key(c[0],c[1]));};
+const rnd=n=>Math.floor(Math.random()*n);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const fmt=k=>'('+k+')';
+function allCells(){const a=[];for(let q=-4;q<=4;q++)for(let r=-4;r<=4;r++)if(inB(q,r))a.push(key(q,r));return a;}
+let G=null;
+function log(t){G.log.push({r:G.round,t});if(G.log.length>300)G.log.shift();}
+function rollWind(){const s=[0,1,1,2,2,3][rnd(6)];return {dir:rnd(6),str:s};}
+function windText(w){return w.str===0?'凪（風なし）':DIRN[w.dir]+'向き・強さ'+w.str;}
+function makeDeck(kind){const c=[];DECKLIST[kind].forEach(([k,n])=>{for(let i=0;i<n;i++)c.push(k);});return shuffle(c);}
+const LANDDEF={land4:1,land3:1,land2:2,land1:2,land0:3};
+const landVal=k=>{const d=dist(k,'0,0');const v=G.cfg['land'+d];return v===undefined?LANDDEF['land'+d]:v;};
+const formOf=p=>FORMS[p.plant][p.form];
+const flowers=pid=>Object.keys(G.plants).filter(k=>G.plants[k].owner===pid&&G.plants[k].stage===3);
+function comps(cells){
+  const set=new Set(cells),seen=new Set(),out=[];
+  cells.forEach(c=>{
+    if(seen.has(c))return;const comp=[],st=[c];seen.add(c);
+    while(st.length){const x=st.pop();comp.push(x);neighbors(x).forEach(y=>{if(set.has(y)&&!seen.has(y)){seen.add(y);st.push(y);}});}
+    out.push(comp);
+  });
+  return out;
+}
+function bonusOf(pid){
+  const p=G.players[pid];if(p.form<2)return 0;
+  const fl=flowers(pid),set=new Set(fl);
+  if(p.plant==='balsam'){const m=Math.max(0,...comps(fl).map(c=>c.length));return m>=7?4:m>=5?3:m>=3?2:0;}
+  if(p.plant==='dandelion'){
+    let best=0;
+    fl.forEach(c=>{[0,1,2].forEach(d=>{
+      const[q,r]=P(c);if(set.has(key(q-DIRS[d][0],r-DIRS[d][1])))return;
+      let L=0,x=c;while(set.has(x)){L++;const[a,b]=P(x);x=key(a+DIRS[d][0],b+DIRS[d][1]);}
+      best=Math.max(best,L);
+    });});
+    return best>=5?4:best===4?3:best===3?2:0;
+  }
+  if(p.plant==='oak'){let m=0;Object.keys(G.cells).forEach(k=>{m=Math.max(m,neighbors(k).filter(n=>set.has(n)).length);});return m>=5?4:m===4?3:m===3?2:0;}
+  if(p.plant==='bamboo'){let m=0;comps(fl).forEach(c=>{m=Math.max(m,new Set(c.map(k=>dist(k,'0,0'))).size);});return m>=4?4:m===3?2:0;}
+  if(p.plant==='pitcher'){const adj=new Set();fl.forEach(c=>neighbors(c).forEach(n=>{const x=G.plants[n];if(x&&x.owner!==pid)adj.add(n);}));return Math.min(4,adj.size);}
+  if(p.plant==='coconut'){return Math.min(4,fl.filter(k=>!neighbors(k).some(n=>set.has(n))).length);}
+  if(p.plant==='violet'){const n=fl.filter(k=>G.plants[k].shield).length;return n>=8?4:n>=6?3:n>=4?2:0;}
+  return 0;
+}
+function scoreParts(pid){
+  const land=flowers(pid).reduce((s,k)=>s+G.cells[k].v,0);const bonus=bonusOf(pid);
+  return {land,bonus,total:land+bonus};
+}
+const score=pid=>scoreParts(pid).total;
+function newGame(setup){
+  const cfg=Object.assign({},setup.cfg);const n=setup.plants.length;
+  const starts=n===2?['0,-4','0,4']:n===3?['4,0','0,-4','-4,4']:['0,-4','4,-4','0,4','-4,4'];
+  G={cfg,round:1,phase:'play',cells:{},players:[],plants:{},turn:0,first:0,acted:false,drew:false,pend:null,
+    windNow:rollWind(),windNext:rollWind(),decks:{insect:makeDeck('insect'),animal:makeDeck('animal')},discards:{insect:[],animal:[]},
+    log:[],winner:null,fxUsed:false,fxWind:null,evoDone:false,ai:[]};
+  G.ai=(setup.ai||[]).slice(0,n);while(G.ai.length<n)G.ai.push(false);
+  allCells().forEach(k=>G.cells[k]={v:landVal(k)});
+  G.players=setup.plants.map((pl,i)=>({id:i,plant:pl,form:0,nu:cfg.nu0,hand:[],start:starts[i]}));
+  G.players.forEach(p=>{
+    G.plants[p.start]={owner:p.id,stage:3,shield:false};
+    for(let f=1;f<cfg.flowers;f++){
+      const own=Object.keys(G.plants).filter(k=>G.plants[k].owner===p.id);
+      let best=null,bd=-1;
+      own.forEach(o=>neighbors(o).forEach(c=>{if(G.plants[c])return;const d=dist(c,'0,0');if(d>bd){bd=d;best=c;}}));
+      if(best)G.plants[best]={owner:p.id,stage:3,shield:false};
+    }
+  });
+  G.turn=cfg.randStart?rnd(n):0;G.first=G.turn;
+  log('ゲーム開始');beginTurn();
+}
+function beginTurn(){
+  const p=G.players[G.turn];const n=flowers(p.id).length;
+  p.nu+=n;G.acted=false;G.drew=false;G.pend=null;G.fxUsed=false;G.fxWind=null;G.evoDone=false;
+  log('P'+(p.id+1)+'の手番：栄養+'+n);
+}
+const growCost=stage=>stage===1?G.cfg.grow1:G.cfg.grow2;
+function growTargets(p){
+  return Object.keys(G.plants).filter(k=>{const x=G.plants[k];return x.owner===p.id&&x.stage<3&&p.nu>=growCost(x.stage);});
+}
+const fxBase=k=>({balsam:G.cfg.fxBalsam??1,dand:G.cfg.fxDandelion??1,reroll:G.cfg.fxOakReroll??1,pick:G.cfg.fxOakPick??2,bamboo:G.cfg.fxBamboo??2,pred:G.cfg.fxPred??2,tide:G.cfg.fxTide??1,nest:G.cfg.fxNest??1})[k];
+const fxc=(k,p)=>{const f=p&&formOf(p).fx;return f&&f[k]!==undefined?f[k]:fxBase(k);};
+const keepCost=p=>{const f=formOf(p);return f.keepCost!==undefined?f.keepCost:(G.cfg.keepCost??1);};
+const effWind=()=>G.fxWind||G.windNow;
+const fastTargets=p=>p.plant==='bamboo'&&p.nu>=fxc('bamboo',p)?Object.keys(G.plants).filter(k=>G.plants[k].owner===p.id&&G.plants[k].stage===1):[];
+function grow(pid,cell,fast){
+  const p=G.players[pid];
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(G.pend)return '種の散布を先に終えてください';
+  if(G.acted)return 'この手番の行動（成長／散布）はもう使いました';
+  const x=G.plants[cell];if(!x||x.owner!==pid||x.stage>=3)return '成長できる株ではありません';
+  if(fast){
+    if(p.plant!=='bamboo')return '急成長はタケノコの効果です';
+    if(x.stage!==1)return '急成長は種にだけ使えます';
+    const c=fxc('bamboo',p);if(p.nu<c)return '栄養が足りません';
+    p.nu-=c;x.stage=3;G.acted=true;
+    log('P'+(pid+1)+'が'+fmt(cell)+'を急成長させて花にした（栄養-'+c+'）');return;
+  }
+  const c=growCost(x.stage);if(p.nu<c)return '栄養が足りません';
+  p.nu-=c;x.stage++;G.acted=true;
+  log('P'+(pid+1)+'が'+fmt(cell)+'を'+STAGE[x.stage]+'に成長（栄養-'+c+'）');
+}
+function evoInfo(p){const nx=p.form+1;if(nx>2)return null;return {next:nx,cost:G.cfg['evoCost'+nx],need:G.cfg['evoFlowers'+nx]};}
+function evolve(pid){
+  const p=G.players[pid];
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(G.pend)return '散布の途中です';
+  if(G.evoDone)return '進化は1手番に1段階までです';
+  const e=evoInfo(p);if(!e)return 'すでに最終形です';
+  if(flowers(pid).length<e.need)return '花が'+e.need+'輪以上必要です';
+  if(p.nu<e.cost)return '栄養が足りません';
+  p.nu-=e.cost;p.form=e.next;G.evoDone=true;
+  log('P'+(pid+1)+'の'+PLANTS[p.plant].n+'が「'+formOf(p).n+'」に進化（栄養-'+e.cost+'）');
+}
+function ensureDeck(k){
+  if(!G.decks[k].length&&G.discards[k].length){G.decks[k]=shuffle(G.discards[k]);G.discards[k]=[];}
+  return G.decks[k].length>0;
+}
+function pendOptions(){
+  const d=G.pend,o=d.origin,out=[];
+  Object.keys(G.cells).forEach(c=>{
+    if(G.plants[c]||c===o)return;const dd=dist(o,c);
+    if(d.plant==='oak'){if(dd<=d.animal.r)out.push(c);}
+    else if(d.plant==='dandelion'){if(dist(d.T,c)<=1)out.push(c);}
+    else if(d.plant==='coconut'){if(dd>=d.minDist)out.push(c);}
+    else{if(dd<=d.range)out.push(c);}
+  });
+  return out;
+}
+function startDisperse(pid,cell){
+  const p=G.players[pid];
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(G.pend)return '散布の途中です';
+  if(G.acted)return 'この手番の行動（成長／散布）はもう使いました';
+  const x=G.plants[cell];if(!x||x.owner!==pid||x.stage!==3)return '花の株を選んでください';
+  const mode=PLANTS[p.plant].mode,f=formOf(p),kc=mode==='keep'?keepCost(p):0;
+  if(mode==='keep'&&p.nu<kc)return '枯れずに散布するには栄養'+kc+'が必要です';
+  const pend={pid,origin:cell,plant:p.plant,mode,left:f.seeds,placed:0,boost:0,range:f.range||0,minDist:f.minDist||0,guard:!!f.guard,tide:false,animal:null,animalId:null,T:null,keep:mode!=='wither',cost:kc};
+  if(p.plant==='oak'){
+    if(!ensureDeck('animal'))return '動物の山札がありません';
+    const id=G.decks.animal.pop();pend.animalId=id;pend.animal={n:CARDS[id].n,r:CARDS[id].steps};
+  }
+  if(p.plant==='dandelion'){
+    const w=effWind();pend.T=cell;
+    if(w.str>0){const dv=DIRS[w.dir],[q,r]=P(cell);for(let s=w.str+1;s>=1;s--){if(inB(q+dv[0]*s,r+dv[1]*s)){pend.T=key(q+dv[0]*s,r+dv[1]*s);break;}}}
+  }
+  G.pend=pend;
+  if(pendOptions().length===0){
+    G.pend=null;if(pend.animalId)G.discards.animal.push(pend.animalId);
+    return '種を置けるマスがありません';
+  }
+  if(mode==='keep')p.nu-=kc;else if(mode==='wither')delete G.plants[cell];else x.stage=2;
+  log('P'+(pid+1)+'が'+fmt(cell)+'の花から種を飛ばす'+(mode==='keep'?'（枯れずに散布'+(kc?'：栄養-'+kc:'')+'）':mode==='wither'?'（花は枯れる）':'（花は芽に戻る）')+
+    (pend.animal?'（運び手：'+pend.animal.n+'・歩数'+pend.animal.r+'）':p.plant==='dandelion'?'（風：'+windText(effWind())+'）':''));
+}
+function placeDisperse(cell){
+  const d=G.pend;if(!d)return '散布中ではありません';
+  if(!pendOptions().includes(cell))return 'そのマスには置けません';
+  const st=(d.mode==='wither'&&G.cfg.witherSprout!==false)?2:1;
+  G.plants[cell]={owner:d.pid,stage:st,shield:!!d.guard};d.left--;d.placed++;
+  log((st===2?'種が芽の状態で':'種が')+fmt(cell)+'に着地'+(d.guard?'（守り付き）':'')+'（P'+(d.pid+1)+'）');
+  if(d.left<=0||pendOptions().length===0)finishDisperse();
+}
+function finishDisperse(){
+  const d=G.pend;if(d&&d.animalId)G.discards.animal.push(d.animalId);
+  G.pend=null;G.acted=true;
+}
+function fxWindAdjust(pid,mode){
+  const p=G.players[pid];
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(p.plant!=='dandelion')return '風を読むのはたんぽぽの効果です';
+  if(G.pend||G.acted)return '散布や成長の前に使ってください';
+  if(G.fxUsed)return '固有効果は1手番に1回までです';
+  const c=fxc('dand',p);if(p.nu<c)return '栄養が足りません';
+  const w=Object.assign({},effWind());
+  if(mode==='str'){if(w.str>=3)return 'これ以上強くできません';w.str++;}
+  else{if(w.str===0)return '凪のときは向きを変えても意味がありません';w.dir=(w.dir+(mode==='ccw'?1:5))%6;}
+  p.nu-=c;G.fxWind=w;G.fxUsed=true;
+  log('P'+(pid+1)+'が風を読んだ → '+windText(w)+(c?'（栄養-'+c+'）':''));
+}
+function fxBalsam(pid){
+  const p=G.players[pid],d=G.pend;
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(!d||d.plant!=='balsam')return '散布中のホウセンカだけが使えます';
+  if(d.boost>=2)return '1回の散布では2回までです';
+  const c=fxc('balsam',p);if(p.nu<c)return '栄養が足りません';
+  p.nu-=c;d.left++;d.boost++;log('P'+(pid+1)+'が弾けた：種+1個（栄養-'+c+'）');
+}
+function animalPeek(n){
+  ensureDeck('animal');
+  if(G.decks.animal.length<n&&G.discards.animal.length){G.decks.animal=shuffle(G.decks.animal.concat(G.discards.animal));G.discards.animal=[];}
+  return G.decks.animal.slice(-n).reverse();
+}
+function fxOak(pid,mode,idx){
+  const p=G.players[pid],d=G.pend;
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(!d||d.plant!=='oak')return '散布中のカシだけが使えます';
+  if(d.placed>0)return '最初の種を置く前に使ってください';
+  if(G.fxUsed)return '固有効果は1手番に1回までです';
+  const c=mode==='pick'?fxc('pick',p):fxc('reroll',p);if(p.nu<c)return '栄養が足りません';
+  const oldId=d.animalId,oldA=d.animal;let newId;
+  if(mode==='pick'){
+    const top=animalPeek(3);newId=top[idx];if(!newId)return '動物を選んでください';
+    const at=G.decks.animal.lastIndexOf(newId);G.decks.animal.splice(at,1);
+  }else{
+    if(!ensureDeck('animal'))return '動物の山札がありません';
+    newId=G.decks.animal.pop();
+  }
+  d.animalId=newId;d.animal={n:CARDS[newId].n,r:CARDS[newId].steps};
+  if(pendOptions().length===0){
+    G.decks.animal.push(newId);d.animalId=oldId;d.animal=oldA;return '種を置けるマスがなくなるため使えません';
+  }
+  G.discards.animal.push(oldId);
+  p.nu-=c;G.fxUsed=true;
+  log('P'+(pid+1)+'が動物を'+(mode==='pick'?'選んだ':'引き直した')+'：'+d.animal.n+'（歩数'+d.animal.r+(c?'、栄養-'+c:'')+'）');
+}
+function fxTide(pid){
+  const p=G.players[pid],d=G.pend;
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(!d||d.plant!=='coconut')return '散布中のココヤシだけが使えます';
+  if(d.placed>0)return '最初の種を置く前に使ってください';
+  if(d.tide)return 'すでに使いました';
+  const c=fxc('tide',p);if(p.nu<c)return '栄養が足りません';
+  p.nu-=c;d.tide=true;d.minDist=2;log('P'+(pid+1)+'が潮に乗った：元の花から距離2以上の空きマスにも着地できる'+(c?'（栄養-'+c+'）':''));
+}
+const nestTargets=p=>Object.keys(G.plants).filter(k=>G.plants[k].owner===p.id&&!G.plants[k].shield);
+function fxNest(pid,cell){
+  const p=G.players[pid];
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(p.plant!=='violet')return 'アリの巣はスミレの効果です';
+  if(G.pend)return '散布の途中は使えません';
+  if(G.fxUsed)return '固有効果は1手番に1回までです';
+  const x=G.plants[cell];if(!x||x.owner!==pid||x.shield)return '守りを付けられない株です';
+  const c=fxc('nest',p);if(p.nu<c)return '栄養が足りません';
+  p.nu-=c;x.shield=true;G.fxUsed=true;log('P'+(pid+1)+'がアリの巣で'+fmt(cell)+'の株に守りを付けた'+(c?'（栄養-'+c+'）':''));
+}
+function predTargets(p){
+  if(p.plant!=='pitcher')return [];
+  const r=formOf(p).predRange||2;const own=Object.keys(G.plants).filter(k=>G.plants[k].owner===p.id);
+  return Object.keys(G.plants).filter(k=>{const x=G.plants[k];if(x.owner===p.id)return false;if(x.stage===3&&p.form<2)return false;return own.some(o=>dist(o,k)<=r);});
+}
+function fxPredate(pid,cell){
+  const p=G.players[pid];
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(p.plant!=='pitcher')return '捕食はウツボカズラの効果です';
+  if(G.pend)return '散布の途中は使えません';
+  if(G.fxUsed)return '固有効果は1手番に1回までです';
+  if(!predTargets(p).includes(cell))return '捕食できない株です';
+  const c=fxc('pred',p);if(p.nu<c)return '栄養が足りません';
+  const x=G.plants[cell],blocked=x.shield;
+  p.nu-=c;G.fxUsed=true;
+  log('P'+(pid+1)+'が捕食を発動'+(c?'（栄養-'+c+'）':''));
+  damage(cell,x.stage===3?1:3,'捕食');
+  if(!blocked){p.nu+=1;log('捕食で栄養+1');}
+}
+const drawCostOf=k=>k==='insect'?(G.cfg.drawInsect??3):(G.cfg.drawAnimal??5);
+function drawCard(pid,kind){
+  const p=G.players[pid];
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(G.pend)return '散布の途中です';
+  if(G.drew)return 'カードは1手番に1枚まで引けます';
+  if(kind!=='insect'&&kind!=='animal')return '山札を選んでください';
+  const dc=drawCostOf(kind);
+  if(p.nu<dc)return '栄養が足りません';
+  if(!ensureDeck(kind))return '山札がありません';
+  p.nu-=dc;const id=G.decks[kind].pop();p.hand.push(id);G.drew=true;
+  log('P'+(pid+1)+'が'+(kind==='insect'?'虫':'動物')+'カードを1枚引いた（栄養-'+dc+'）');
+}
+function atkRange(id,pid){const b=CARDS[id].kind==='虫'?(G.cfg.rangeInsect||1):(G.cfg.rangeAnimal||2);const p=pid!==undefined?G.players[pid]:null;return b+(p?(formOf(p).atk||0):0);}
+function isAtk(id){return CARDS[id].tg==='enemy'||CARDS[id].tg==='enemyLow';}
+function atkSources(pid,id){return Object.keys(G.plants).filter(k=>G.plants[k].owner===pid&&cardTargets(pid,id,k).length>0);}
+function cardTargets(pid,id,src){
+  const tg=CARDS[id].tg;if(!tg)return null;
+  return Object.keys(G.plants).filter(k=>{
+    const x=G.plants[k];
+    if(tg==='enemy')return x.owner!==pid&&src&&dist(src,k)<=atkRange(id,pid);
+    if(tg==='enemyLow')return x.owner!==pid&&x.stage<=2&&src&&dist(src,k)<=atkRange(id,pid);
+    if(tg==='ownGrow')return x.owner===pid&&x.stage<3;
+    if(tg==='own')return x.owner===pid&&(id!=='ladybug'||!x.shield);
+    return false;
+  });
+}
+function damage(cell,lv,label){
+  const x=G.plants[cell];if(!x)return;
+  if(x.shield){x.shield=false;log(fmt(cell)+'の株は守りでダメージを防いだ（守りは消滅）');return;}
+  x.stage-=lv;
+  if(x.stage<1){delete G.plants[cell];log(label+'：'+fmt(cell)+'の株が枯れた');}
+  else log(label+'：'+fmt(cell)+'の株が'+STAGE[x.stage]+'に退化');
+}
+function useCard(pid,idx,cell,src){
+  const p=G.players[pid];
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(G.pend)return '散布の途中です';
+  const id=p.hand[idx];if(!id)return 'カードがありません';
+  const c=CARDS[id];
+  if(isAtk(id)){
+    const sp=G.plants[src];if(!sp||sp.owner!==pid)return '攻撃の起点にする自分の株を選んでください';
+    if(!cardTargets(pid,id,src).includes(cell))return '射程外か、対象にできない株です';
+  }else if(c.tg){if(!cardTargets(pid,id).includes(cell))return '対象にできない株です';}
+  log('P'+(pid+1)+'が「'+c.n+'」を使用');
+  if(id==='aphid')damage(cell,1,'アブラムシ');
+  else if(id==='caterpillar')damage(cell,3,'イモムシ');
+  else if(id==='deer')damage(cell,2,'シカ');
+  else if(id==='boar')damage(cell,3,'イノシシ');
+  else if(id==='bear'){damage(cell,3,'クマ');neighbors(cell).forEach(k=>{const x=G.plants[k];if(x&&x.owner!==pid)damage(k,1,'クマ（余波）');});}
+  else if(id==='ladybug'){G.plants[cell].shield=true;}
+  else if(id==='dog'){G.plants[cell].shield=true;neighbors(cell).forEach(n=>{const x=G.plants[n];if(x&&x.owner===pid)x.shield=true;});}
+  else if(id==='bee')p.nu+=3;
+  else if(id==='squirrel')p.nu+=2;
+  else if(id==='butterfly'){const x=G.plants[cell];x.stage++;log('チョウ：'+fmt(cell)+'の株が'+STAGE[x.stage]+'に成長');}
+  else if(id==='worm'){[cell].concat(neighbors(cell)).forEach(k=>{const x=G.plants[k];if(x&&x.owner===pid&&x.stage<3){x.stage++;log('ミミズ：'+fmt(k)+'の株が'+STAGE[x.stage]+'に成長');}});}
+  p.hand.splice(idx,1);G.discards[c.deck].push(id);
+}
+function endTurn(pid){
+  if(G.turn!==pid||G.phase!=='play')return '手番ではありません';
+  if(G.pend)return '散布の途中です（「ここで終了」で残りの種を捨てられます）';
+  const s=score(pid);
+  log('P'+(pid+1)+'の手番終了（得点'+s+'）');
+  if(s>=G.cfg.target){G.phase='end';G.winner=pid;log('P'+(pid+1)+'が'+s+'点に到達して勝利');return;}
+  const n=G.players.length;G.turn=(G.turn+1)%n;
+  if(G.turn===G.first){
+    G.round++;G.windNow=G.windNext;G.windNext=rollWind();
+    if(G.round>G.cfg.maxRounds){
+      G.phase='end';const sc=G.players.map(p=>score(p.id));const m=Math.max(...sc);G.winner=sc.indexOf(m);log('ラウンド上限：最高得点でP'+(G.winner+1)+'の勝ち');return;
+    }
+  }
+  beginTurn();
+}
+/*ENGINE_END*/
+
+/* ================= UI ================= */
+const $=id=>document.getElementById(id);
+const app=$('app');
+const SAVE='plantgame.v5';
+const ui={hist:[],sel:null,sheet:null,info:null,setup:null,toastT:null};
+function defaultSetup(){return {n:4,plants:['balsam','dandelion','oak','bamboo'],ai:[false,true,true,true],cfg:{target:10,nu0:2,flowers:2,grow1:0,grow2:0,drawInsect:3,drawAnimal:5,rangeInsect:1,rangeAnimal:2,keepCost:1,evoCost1:3,evoFlowers1:3,evoCost2:5,evoFlowers2:5,land4:1,land3:1,land2:2,land1:2,land0:3,fxBalsam:1,fxDandelion:1,fxOakReroll:1,fxOakPick:2,fxBamboo:2,fxPred:2,fxTide:1,fxNest:1,maxRounds:30,witherSprout:true,randStart:true}};}
+ui.setup=defaultSetup();
+function toast(t){const e=$('toast');e.textContent=t;e.hidden=false;clearTimeout(ui.toastT);ui.toastT=setTimeout(()=>{e.hidden=true;},3000);}
+function save(){try{if(G)localStorage.setItem(SAVE,JSON.stringify(G));}catch(e){}}
+function loadSaved(){try{const s=localStorage.getItem(SAVE);return s?JSON.parse(s):null;}catch(e){return null;}}
+function run(fn,msg){
+  const s=JSON.stringify(G);const r=fn();
+  if(typeof r==='string'){toast(r);render();return false;}
+  ui.hist.push(s);if(ui.hist.length>80)ui.hist.shift();
+  autoRunBots();
+  ui.sel=null;closeSheet();render();if(msg)toast(typeof msg==='function'?msg():msg);return true;
+}
+function undo(){if(!ui.hist.length){toast('戻せる操作がありません');return;}G=JSON.parse(ui.hist.pop());ui.sel=null;closeSheet();render();}
+function pickCell(prompt,cells,onPick){if(!cells.length){toast('対象にできるマスがありません');return;}ui.sel={cells,prompt,onPick};closeSheet();render();window.scrollTo({top:0,behavior:'smooth'});}
+function openSheet(title,items,note){ui.sheet={title,items,note};drawSheet();}
+function closeSheet(){ui.sheet=null;drawSheet();}
+function drawSheet(){
+  const w=$('sheetWrap');
+  if(!ui.sheet){w.hidden=true;return;}
+  w.hidden=false;const s=ui.sheet;
+  $('sheet').innerHTML='<h3>'+s.title+'</h3>'+(s.note?'<p class="mut">'+s.note+'</p>':'')+
+    s.items.map((it,i)=>'<button class="item" data-s="'+i+'"'+(it.disabled?' disabled':'')+'><b>'+it.label+'</b><span>'+(it.sub||'')+'</span></button>').join('')+
+    '<button class="btn" data-s="x" style="width:100%">閉じる</button>';
+}
+$('sheetWrap').addEventListener('click',e=>{
+  if(e.target.id==='sheetWrap'){closeSheet();return;}
+  const b=e.target.closest('[data-s]');if(!b)return;
+  if(b.dataset.s==='x'){closeSheet();return;}
+  const it=ui.sheet.items[+b.dataset.s];if(it&&!it.disabled)it.fn();
+});
+const INTERP=[
+ '得点＝自分の花がある土地の点数の合計＋（最終形のときだけ）花の並び方ボーナス。土地の点数は中心3・その外2・2・1・外周1（設定で変更可）と平らにしてあり、目標点（既定10）には最終形のボーナスも使って届く想定です。誰かの手番終了時に目標点以上ならその人の勝ちです。',
+ '栄養＝自分の手番の開始時に、花の数だけ獲得。使い道は、カードを引く・植物の固有効果・進化・枯れずに散布するコストです。',
+ '1手番の主行動は「成長（種→芽・芽→花、既定は無料）」か「花から種を飛ばす」のどちらか1回。進化・固有効果・カードは主行動とは別に使えます。',
+ '進化（仮）：初期→中間は花3輪以上＋栄養3、中間→最終は花5輪以上＋栄養5（設定可）。1手番に1段階まで。',
+ '散布には3種類あります。「枯れる系」（ホウセンカ・たんぽぽ・ココヤシ）は花が枯れる代わりに無料で、飛んだ種は芽の状態で着地します（仮。設定でオフ可）。「枯れない系」（カシ・ウツボカズラ・スミレ）は花が残る代わりに栄養1が必要（最終形は無料）。「タケノコ」は花が芽に1段階戻ります（栄養は不要）。',
+ 'カードの山札は「虫」と「動物」の2つで、引くときはどちらか選びます（虫は栄養3、動物は栄養5、設定可・1手番に1枚まで）。動物カードには歩数があり、カシの散布ではこの山札の一番上を引いて歩数だけを使います（効果は使わず、使い終わったら捨て札へ）。',
+ '攻撃カードは、自分の株を1つ起点に選び、そこから虫1マス／動物2マス以内（ウツボカズラは+1〜+2）の相手の株にだけ使えます。守りは次のダメージを1回無効にします。',
+ '最終形ボーナス（仮・最大+4）：ホウセンカ＝群生、たんぽぽ＝風の道、カシ＝花の輪、タケノコ＝竹林、ウツボカズラ＝包囲網（隣り合う相手の株の数）、ココヤシ＝離れ島（孤立した花の数）、スミレ＝花畑（守り付きの花が4/6/8輪）。',
+ '固有効果（仮）：ホウセンカ＝弾ける／たんぽぽ＝風を読む／カシ＝呼び寄せる／タケノコ＝急成長／ウツボカズラ＝捕食（近くの相手の種か芽を枯らして栄養+1）／ココヤシ＝潮に乗る（着地範囲を広げる）／スミレ＝アリの巣（守りを付ける）。',
+ '風は毎ラウンド更新（次ラウンドの風も表示）。ラウンド上限（既定30）に達したら最高得点者の勝ち。',
+ '各植物のイラストは、進化の実感を出すための簡易な絵です。'
+];
+const HOWTO=[
+ '六角形の盤面で、各マスに土地の点数があります。全員が外側（外周）から、花を2つ持ってスタートします。',
+ '自分の手番：①栄養が入る（花の数だけ）→②主行動を1回（成長させる／花から種を飛ばす）→③進化・固有効果・カード（好きなだけ）→④「手番を終える」。',
+ '画面下のボタンを押して、盤面の光っている（オレンジ色の）マスをタップして選びます。間違えたら「元に戻す」。',
+ '勝利条件：手番終了時に、自分の花がある土地の点数の合計（最終形なら並び方ボーナスも）が目標点（既定10）に達した人の勝ちです。',
+ 'このアプリは1台の端末で全員分を順番に操作する、テストプレイ用です。'
+];
+function windChip(w,label){
+  const inner=w.str===0?'凪':'<svg viewBox="-12 -12 24 24" width="24" height="24" aria-hidden="true"><g transform="rotate('+DIRANG[w.dir]+')" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M-8 0H8M2 -6L8 0L2 6"/></g></svg>'+DIRN[w.dir]+' 強'+w.str;
+  return '<span class="chip"><span class="mut">'+label+'</span>'+inner+'</span>';
+}
+function plantArt(pl,f,size){
+  const g='#4f9a55',g2='#3c7d43',ground='<path d="M10 90H90" stroke="#8a7a5c" stroke-width="3" stroke-linecap="round"/>';
+  const leaf=(x,y,r,a)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="'+r+'" ry="'+(r*0.42)+'" fill="'+g+'" transform="rotate('+a+' '+x+' '+y+')"/>';
+  const st=(d,w)=>'<path d="'+d+'" stroke="'+g2+'" stroke-width="'+(w||3)+'" fill="none" stroke-linecap="round"/>';
+  let b='';
+  if(pl==='balsam'){
+    const c='#d6336c';
+    if(f===0)b=st('M50 90V66')+leaf(42,76,9,-25)+leaf(58,78,9,25)+'<circle cx="50" cy="62" r="5" fill="'+c+'"/>';
+    else if(f===1)b=st('M50 90V42')+leaf(40,72,12,-30)+leaf(60,66,12,30)+leaf(41,56,9,-25)+'<circle cx="50" cy="38" r="8" fill="'+c+'"/><circle cx="38" cy="48" r="6" fill="'+c+'"/><ellipse cx="62" cy="52" rx="4" ry="7" fill="#8fce7a"/>';
+    else b=st('M30 90V54')+st('M50 90V30')+st('M70 90V46')+leaf(38,78,11,-30)+leaf(62,78,11,30)+leaf(42,62,9,-25)+leaf(60,58,9,25)+
+      '<circle cx="50" cy="26" r="9" fill="'+c+'"/><circle cx="34" cy="38" r="7" fill="'+c+'"/><circle cx="30" cy="50" r="6" fill="'+c+'"/><circle cx="70" cy="42" r="8" fill="'+c+'"/><circle cx="66" cy="54" r="5" fill="'+c+'"/><ellipse cx="58" cy="38" rx="3.5" ry="6" fill="#8fce7a"/><circle cx="50" cy="26" r="3" fill="#fff" opacity=".7"/>';
+  }else if(pl==='dandelion'){
+    const y='#f2b705',ros=leaf(34,86,13,-10)+leaf(66,86,13,10)+leaf(42,82,11,-35)+leaf(58,82,11,35);
+    const puff=(x,yy,r)=>'<circle cx="'+x+'" cy="'+yy+'" r="'+r+'" fill="#fff" stroke="#b8b8b8" stroke-width="1.5"/><g stroke="#b8b8b8" stroke-width="1.5">'+[0,45,90,135].map(a=>'<line x1="'+(x-r)+'" y1="'+yy+'" x2="'+(x+r)+'" y2="'+yy+'" transform="rotate('+a+' '+x+' '+yy+')"/>').join('')+'</g>';
+    if(f===0)b=ros+'<circle cx="50" cy="76" r="5" fill="'+y+'"/>';
+    else if(f===1)b=ros+st('M50 84V40')+'<circle cx="50" cy="34" r="9" fill="'+y+'"/>';
+    else b=ros+st('M40 84V44')+st('M62 84V34')+puff(40,38,10)+'<circle cx="62" cy="28" r="9" fill="'+y+'"/><path d="M76 22q6-4 10-1M20 24q6-4 10-1M78 48q5-3 9 0" stroke="#b8b8b8" stroke-width="1.5" fill="none"/>';
+  }else if(pl==='oak'){
+    const br='#8a6a44',cr='#4f9a55',ac='<ellipse cx="X" cy="Y" rx="3" ry="4" fill="#b7793b"/>';
+    const acorn=(x,y)=>ac.replace('X',x).replace('Y',y);
+    if(f===0)b='<path d="M50 90V64" stroke="'+br+'" stroke-width="3" fill="none"/>'+leaf(43,66,9,-30)+leaf(57,62,9,30)+leaf(50,56,8,-80);
+    else if(f===1)b='<path d="M50 90V52" stroke="'+br+'" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="50" cy="40" r="20" fill="'+cr+'"/>'+acorn(58,48)+acorn(42,44);
+    else b='<path d="M50 90V50" stroke="'+br+'" stroke-width="10" fill="none" stroke-linecap="round"/><circle cx="34" cy="44" r="16" fill="#3c7d43"/><circle cx="66" cy="44" r="16" fill="#3c7d43"/><circle cx="50" cy="28" r="19" fill="'+cr+'"/>'+acorn(40,50)+acorn(60,52)+acorn(50,36)+acorn(70,40);
+  }else if(pl==='bamboo'){
+    const bm='#5b9d4a',nd=(x,y)=>'<line x1="'+(x-4)+'" y1="'+y+'" x2="'+(x+4)+'" y2="'+y+'" stroke="#2f6d3a" stroke-width="2"/>';
+    const stalk=(x,top)=>{let s2='<line x1="'+x+'" y1="90" x2="'+x+'" y2="'+top+'" stroke="'+bm+'" stroke-width="6" stroke-linecap="round"/>';for(let y=84;y>top+4;y-=14)s2+=nd(x,y);return s2;};
+    if(f===0)b='<path d="M50 90L42 90Q46 66 50 56Q54 66 58 90Z" fill="#c9a26a" stroke="#8a6a44" stroke-width="2"/><path d="M47 72H53M46 80H54" stroke="#8a6a44" stroke-width="1.5"/>';
+    else if(f===1)b=stalk(40,40)+stalk(60,30)+leaf(50,44,8,-30)+leaf(70,36,8,25)+leaf(30,50,8,-25);
+    else b=stalk(26,30)+stalk(42,16)+stalk(58,24)+stalk(74,34)+leaf(34,24,9,-30)+leaf(50,14,9,25)+leaf(66,20,9,-25)+leaf(82,32,8,30)+leaf(20,38,8,-30);
+  }else if(pl==='pitcher'){
+    const cup=(x,y,sc,c)=>'<g transform="translate('+x+' '+y+') scale('+sc+')"><path d="M-9 0Q-11 22 0 26Q11 22 9 0Z" fill="'+c+'" stroke="#2f6d3a" stroke-width="1.5"/><ellipse cx="0" cy="0" rx="9" ry="3.5" fill="#e03131" stroke="#8f1f1f" stroke-width="1.2"/><path d="M-8 -4Q0 -14 8 -6" fill="none" stroke="#2f6d3a" stroke-width="2"/><circle cx="-3" cy="12" r="1.6" fill="#e03131"/><circle cx="3" cy="16" r="1.6" fill="#e03131"/></g>';
+    if(f===0)b=st('M50 90V66')+leaf(40,82,10,-20)+leaf(60,82,10,20)+cup(50,58,0.85,'#8fce7a');
+    else if(f===1)b=st('M36 90V60')+st('M64 90V54')+leaf(50,86,13,0)+cup(36,52,0.85,'#8fce7a')+cup(64,44,1,'#e8b04b');
+    else b=st('M26 90V58')+st('M50 90V40')+st('M74 90V52')+leaf(38,88,12,-10)+leaf(62,88,12,10)+cup(26,50,0.8,'#e8b04b')+cup(50,24,1.15,'#d9534f')+cup(74,44,0.9,'#e8b04b')+'<circle cx="58" cy="14" r="1.6" fill="#222"/><circle cx="62" cy="16" r="1.3" fill="#222"/>';
+  }else if(pl==='coconut'){
+    const tr='#9a6b3f',fr='#2f8f4e';
+    const frond=(x,y,a,l)=>{const r=a*Math.PI/180;const ex=x+l*Math.cos(r),ey=y+l*Math.sin(r)+l*0.3,cx=x+l*0.5*Math.cos(r),cy=y+l*0.5*Math.sin(r)-l*0.3;return '<path d="M'+x+' '+y+'Q'+cx.toFixed(1)+' '+cy.toFixed(1)+' '+ex.toFixed(1)+' '+ey.toFixed(1)+'" stroke="'+fr+'" stroke-width="5" fill="none" stroke-linecap="round"/>';};
+    const nut=(x,y)=>'<circle cx="'+x+'" cy="'+y+'" r="4" fill="#7b4a22"/>';
+    const wave='<path d="M8 95q8-5 16 0t16 0t16 0t16 0t16 0" stroke="#4dabf7" stroke-width="3" fill="none" opacity=".85"/>';
+    if(f===0)b=wave+'<path d="M50 90Q52 80 50 70" stroke="'+tr+'" stroke-width="5" fill="none" stroke-linecap="round"/>'+frond(50,70,-150,16)+frond(50,70,-90,14)+frond(50,70,-30,16)+nut(46,88);
+    else if(f===1)b=wave+'<path d="M50 90Q54 68 50 50" stroke="'+tr+'" stroke-width="6" fill="none" stroke-linecap="round"/>'+frond(50,50,-160,24)+frond(50,50,-115,20)+frond(50,50,-65,20)+frond(50,50,-20,24)+nut(48,54)+nut(54,56);
+    else b=wave+'<path d="M46 90Q56 60 48 34" stroke="'+tr+'" stroke-width="7" fill="none" stroke-linecap="round"/>'+frond(48,34,-170,28)+frond(48,34,-135,24)+frond(48,34,-100,20)+frond(48,34,-60,20)+frond(48,34,-30,24)+frond(48,34,5,26)+nut(46,40)+nut(53,41)+nut(50,46);
+  }else{
+    const vc='#7048e8';
+    const fl=(x,y,sc)=>'<g transform="translate('+x+' '+y+') scale('+sc+')"><circle cx="-5" cy="-4" r="5" fill="'+vc+'"/><circle cx="5" cy="-4" r="5" fill="'+vc+'"/><circle cx="0" cy="5" r="5.5" fill="'+vc+'"/><circle cx="0" cy="0" r="2.6" fill="#ffd43b"/></g>';
+    const ant=(x,y)=>'<circle cx="'+x+'" cy="'+y+'" r="1.8" fill="#222"/><circle cx="'+(x+3.5)+'" cy="'+y+'" r="1.5" fill="#222"/>';
+    if(f===0)b=leaf(40,82,12,-15)+leaf(60,82,12,15)+leaf(50,76,9,-90)+'<circle cx="50" cy="66" r="5" fill="'+vc+'"/>';
+    else if(f===1)b=st('M34 90V64')+st('M50 90V52')+st('M66 90V62')+leaf(42,86,12,-10)+leaf(58,86,12,10)+fl(34,60,0.75)+fl(50,48,0.85)+fl(66,58,0.75);
+    else b=st('M24 90V60')+st('M40 90V44')+st('M58 90V38')+st('M76 90V54')+leaf(32,88,11,-10)+leaf(50,88,12,0)+leaf(68,88,11,10)+fl(24,56,0.8)+fl(40,40,0.9)+fl(58,34,1)+fl(76,50,0.8)+ant(30,84)+ant(70,82);
+  }
+  return '<svg viewBox="0 0 100 100" width="'+(size||64)+'" height="'+(size||64)+'" role="img" aria-label="'+FORMS[pl][f].n+'">'+ground+b+'</svg>';
+}
+function boardSvg(selCells){
+  const S=22,W3=Math.sqrt(3);
+  const pts=[0,1,2,3,4,5].map(i=>{const a=(30+60*i)*Math.PI/180;return (S*Math.cos(a)).toFixed(1)+','+(S*Math.sin(a)).toFixed(1);}).join(' ');
+  const selSet=new Set(selCells||[]);
+  let o='<svg id="board" viewBox="-178 -158 356 316" role="img" aria-label="六角形の盤面">';
+  Object.keys(G.cells).forEach(k=>{
+    const[q,r]=P(k);const x=S*W3*(q+r/2),y=S*1.5*r;const c=G.cells[k];const pl=G.plants[k];const sl=selSet.has(k);
+    o+='<g class="cell'+(sl?' sel':'')+'" data-k="'+k+'" transform="translate('+x.toFixed(1)+','+y.toFixed(1)+')"><polygon class="v'+(5-dist(k,'0,0'))+'" points="'+pts+'"/>';
+    o+='<text class="tg" y="-12">'+c.v+'点</text>';
+    if(G.pend&&G.pend.origin===k)o+='<circle r="9" fill="none" stroke="var(--ink)" stroke-dasharray="3 2"/>';
+    if(pl){
+      const ow=G.players[pl.owner];const col=PLANTS[ow.plant].c;
+      const rad=pl.stage===1?5:pl.stage===2?8:11;
+      o+='<circle r="'+rad+'" fill="'+col+'" stroke="#fff" stroke-width="2"/>';
+      if(pl.stage>1)o+='<text class="pn">'+STAGE[pl.stage]+'</text>';
+      if(pl.stage===3&&ow.form>=1)o+='<circle r="'+(rad-4)+'" fill="none" stroke="#fff" stroke-width="1" opacity=".8"/>';
+      if(pl.stage===3&&ow.form===2)o+='<circle r="'+(rad+1.8)+'" fill="none" stroke="#ffd43b" stroke-width="2"/>';
+      if(pl.shield)o+='<circle r="'+(rad+4.5)+'" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-dasharray="3 2"/>';
+    }
+    if(sl)o+='<polygon class="hl" points="'+pts+'"/>';
+    o+='</g>';
+  });
+  return o+'</svg>';
+}
+function cellInfo(k){
+  let t=fmt(k)+' 土地'+G.cells[k].v+'点';const x=G.plants[k];
+  if(x){const ow=G.players[x.owner];t+='／P'+(x.owner+1)+' '+PLANTS[ow.plant].n+'の'+STAGE[x.stage]+(x.shield?'（守り付き）':'');}
+  return t;
+}
+function getSel(){
+  if(ui.sel)return ui.sel;
+  if(G.pend)return {cells:pendOptions(),onPick:k=>run(()=>placeDisperse(k))};
+  return null;
+}
+function fxInfo(p){
+  const F={
+    balsam:{n:'弾ける',d:'散布中、栄養'+fxc('balsam',p)+'で種+1個（1回の散布で最大2回）。最後の種を置く前に使う'},
+    dandelion:{n:'風を読む',d:'散布・成長の前に、栄養'+fxc('dand',p)+'で風の向きを隣へずらす／強さ+1（1手番1回）'},
+    oak:{n:'呼び寄せる',d:'散布中、最初の種を置く前に、栄養'+fxc('reroll',p)+'で動物を引き直す／栄養'+fxc('pick',p)+'で山札の上3枚から選ぶ（1手番1回）'},
+    bamboo:{n:'急成長',d:'栄養'+fxc('bamboo',p)+'で、種を一気に花まで成長させる（主行動の成長の代わり）'},
+    pitcher:{n:'捕食',d:'栄養'+fxc('pred',p)+'で、自分の株から'+(formOf(p).predRange||2)+'マス以内の相手の種か芽を1つ枯らし、栄養+1（最終形は花にも1段階ダメージ）。1手番1回'},
+    coconut:{n:'潮に乗る',d:'散布中、最初の種を置く前に、栄養'+fxc('tide',p)+'で、着地できる範囲を「元の花から距離2以上」に広げる'},
+    violet:{n:'アリの巣',d:'栄養'+fxc('nest',p)+'で、自分の株1つに守りを付ける（1手番1回）'}};
+  return F[p.plant];
+}
+function playerCard(p){
+  const P_=PLANTS[p.plant];const cur=G.phase==='play'&&G.turn===p.id;const f=formOf(p);const sp=scoreParts(p.id);
+  const cnt=[0,0,0,0];Object.values(G.plants).forEach(x=>{if(x.owner===p.id)cnt[x.stage]++;});
+  const e=evoInfo(p);
+  return '<div class="card pc'+(cur?' cur':'')+'" style="--pc:'+P_.c+'"><div style="display:flex;gap:10px;align-items:flex-start"><div style="flex:none">'+plantArt(p.plant,p.form,64)+'</div><div style="flex:1;min-width:0"><div class="pc-h"><b>P'+(p.id+1)+' '+f.n+'</b><span class="mut">'+P_.t+'</span><span class="chip">'+(G.ai&&G.ai[p.id]?'🤖 AI':'🧑 あなた')+'</span><span class="sc">'+sp.total+'/'+G.cfg.target+'点</span></div>'+
+   '<div class="row mut" style="font-size:12.5px;margin:2px 0">'+['初期','中間','最終'][p.form]+'形：'+f.d+'</div></div></div>'+
+   '<div class="row">栄養 <b>'+p.nu+'</b>　株：種'+cnt[1]+'・芽'+cnt[2]+'・花'+cnt[3]+'（次の収入 +'+cnt[3]+'）</div>'+
+   '<div class="row">得点：土地 '+sp.land+(p.form===2?' ＋ 形ボーナス『'+BONUS[p.plant].n+'』 '+sp.bonus:'')+'</div>'+
+   (p.form===2?'<div class="row mut" style="font-size:12.5px">'+BONUS[p.plant].d+'</div>':(e?'<div class="row mut" style="font-size:12.5px">次の進化：花'+e.need+'輪以上・栄養'+e.cost+'</div>':''))+
+   '<div class="row mut" style="font-size:12.5px">固有効果「'+fxInfo(p).n+'」：'+fxInfo(p).d+'</div>'+
+   '<div class="row">手札：'+(p.hand.length?p.hand.map(id=>'<span class="chip">'+CARDS[id].n+'</span>').join(''):'<span class="mut">なし</span>')+'</div></div>';
+}
+function actionCard(){
+  const s=ui.sel;
+  if(s)return '<div class="card"><h2>マスを選んでください</h2><p>'+s.prompt+'</p><button class="btn" data-a="cancel-sel">キャンセル</button></div>';
+  const p=G.players[G.turn];const P_=PLANTS[p.plant];const f=formOf(p);
+  if(G.ai&&G.ai[G.turn])return '<div class="card"><h2>AIの手番</h2><p>P'+(p.id+1)+'（'+f.n+'）が操作中です…</p><button class="btn primary" data-a="ai-step">進める</button></div>';
+  if(G.pend){
+    const d=G.pend;
+    return '<div class="card pc" style="--pc:'+P_.c+'"><h2>P'+(p.id+1)+' '+f.n+'：種を飛ばす</h2><div class="row">残りの種 <b>'+d.left+'</b>個'+(d.animal?'　運び手：<b>'+d.animal.n+'</b>（歩数'+d.animal.r+'）':'')+(d.plant==='dandelion'?'　風：'+windText(effWind()):'')+(d.plant==='coconut'?'　着地範囲：元の花から距離'+d.minDist+'以上':'')+(d.mode==='keep'?'　花は枯れていません':d.mode==='wither'?'　花は枯れました':'　花は芽に戻りました')+'</div><p>盤上のオレンジ色のマスをタップして、種を置きます。</p>'+
+      (d.plant==='balsam'&&d.boost<2?'<button class="btn" data-a="fx-balsam"'+(p.nu<fxc('balsam',p)?' disabled':'')+'>弾ける：種+1個（栄養'+fxc('balsam',p)+'・あと'+(2-d.boost)+'回）</button> ':'')+
+      (d.plant==='oak'&&d.placed===0&&!G.fxUsed?'<button class="btn" data-a="fx-oak-re"'+(p.nu<fxc('reroll',p)?' disabled':'')+'>動物を引き直す（栄養'+fxc('reroll',p)+'）</button> <button class="btn" data-a="fx-oak-pick"'+(p.nu<fxc('pick',p)?' disabled':'')+'>上3枚から選ぶ（栄養'+fxc('pick',p)+'）</button> ':'')+
+      (d.plant==='coconut'&&d.placed===0&&!d.tide?'<button class="btn" data-a="fx-tide"'+(p.nu<fxc('tide',p)?' disabled':'')+'>潮に乗る：距離2以上に拡大（栄養'+fxc('tide',p)+'）</button> ':'')+
+      '<button class="btn" data-a="finish-pend">ここで終了（残りの種は捨てる）</button></div>';
+  }
+  const e=evoInfo(p);
+  const fl=flowers(p.id).length;
+  let h='<div class="card pc" style="--pc:'+P_.c+'"><div style="display:flex;gap:10px;align-items:center"><div style="flex:none">'+plantArt(p.plant,p.form,56)+'</div><div><h2>P'+(p.id+1)+' '+f.n+' の手番</h2><div class="row mut">栄養 '+p.nu+'　得点 '+score(p.id)+'/'+G.cfg.target+'　'+(G.acted?'主行動：済':'主行動：未')+'</div></div></div>';
+  const dI=drawCostOf('insect'),dA=drawCostOf('animal');
+  h+='<div class="slots"><button class="slot" data-a="grow"'+(G.acted?' disabled':'')+'><b>成長させる</b><span>種→芽（'+(G.cfg.grow1?'栄養'+G.cfg.grow1:'無料')+'）／芽→花（'+(G.cfg.grow2?'栄養'+G.cfg.grow2:'無料')+'）</span></button>'+
+     '<button class="slot" data-a="disperse"'+(G.acted?' disabled':'')+'><b>花から種を飛ばす</b><span>'+modeText(p)+'・種'+f.seeds+'つ</span></button>'+
+     '<button class="slot" data-a="evolve"'+((!e||G.evoDone||fl<e.need||p.nu<e.cost)?' disabled':'')+'><b>進化させる</b><span>'+(e?'花'+e.need+'輪以上・栄養'+e.cost+'（今：花'+fl+'輪）':'最終形です')+'</span></button>'+
+     (()=>{const fi=fxInfo(p);let dis=true,note=fi.d;
+       if(p.plant==='dandelion')dis=G.acted||G.fxUsed||p.nu<fxc('dand',p);
+       else if(p.plant==='bamboo')dis=G.acted||fastTargets(p).length===0;
+       else if(p.plant==='pitcher')dis=G.fxUsed||p.nu<fxc('pred',p)||predTargets(p).length===0;
+       else if(p.plant==='violet')dis=G.fxUsed||p.nu<fxc('nest',p)||nestTargets(p).length===0;
+       else note='散布の途中で使えます（'+fi.d+'）';
+       return '<button class="slot" data-a="fx"'+(dis?' disabled':'')+'><b>固有効果：'+fi.n+'</b><span>'+note+'</span></button>';})()+
+     '<button class="slot" data-a="draw-insect"'+((G.drew||p.nu<dI)?' disabled':'')+'><b>虫カードを引く</b><span>栄養'+dI+'・山札'+G.decks.insect.length+'枚</span></button>'+
+     '<button class="slot" data-a="draw-animal"'+((G.drew||p.nu<dA)?' disabled':'')+'><b>動物カードを引く</b><span>栄養'+dA+'・山札'+G.decks.animal.length+'枚（強力）</span></button>'+
+     '<button class="slot" data-a="cards"'+(p.hand.length?'':' disabled')+' style="grid-column:1/-1"><b>カードを使う</b><span>手札 '+p.hand.length+'枚（カードを引けるのは1手番に1枚まで）</span></button></div>';
+  h+='<button class="btn primary" style="width:100%" data-a="end-turn">手番を終える</button></div>';
+  return h;
+}
+function endCard(){
+  let h='<div class="card"><h2>ゲーム終了</h2><p><b>P'+(G.winner+1)+' '+FORMS[G.players[G.winner].plant][G.players[G.winner].form].n+'</b> の勝ち（'+score(G.winner)+'点）</p><table><tr><th>プレイヤー</th><th>形</th><th>土地</th><th>形ボーナス</th><th>合計</th></tr>';
+  G.players.forEach(p=>{const s=scoreParts(p.id);h+='<tr><td>P'+(p.id+1)+' '+PLANTS[p.plant].n+'</td><td>'+['初期','中間','最終'][p.form]+'</td><td>'+s.land+'</td><td>'+s.bonus+'</td><td><b>'+s.total+'</b></td></tr>';});
+  return h+'</table><button class="btn primary" style="width:100%;margin-top:10px" data-a="new">新しいゲームを始める</button></div>';
+}
+function renderGame(){
+  const sel=getSel();const p=G.players[G.turn];
+  let h='<div class="top"><div class="ttl"><h1>植物陣取り テストプレイ台</h1><div class="sub">第'+G.round+'ラウンド'+(G.phase==='play'?'・P'+(p.id+1)+' '+PLANTS[p.plant].n+'の手番':'・終了')+'</div></div><button class="btn sm" data-a="undo">元に戻す</button><button class="btn sm" data-a="menu">メニュー</button></div>';
+  const lv=d=>G.cfg['land'+d]===undefined?LANDDEF['land'+d]:G.cfg['land'+d];
+  h+='<div class="grid"><div><div class="card">'+boardSvg(sel?sel.cells:[])+'<div class="row mut" style="font-size:12.5px;min-height:20px" id="info">'+(ui.info?cellInfo(ui.info):'マスをタップすると内容が表示されます')+'</div>'+
+   '<div class="legend"><span><i style="background:var(--v1)"></i>外周 '+lv(4)+'点</span><span><i style="background:var(--v2)"></i>'+lv(3)+'点</span><span><i style="background:var(--v3)"></i>'+lv(2)+'点</span><span><i style="background:var(--v4)"></i>'+lv(1)+'点</span><span><i style="background:var(--v5)"></i>中心 '+lv(0)+'点</span><span>小=種 中=芽 大=花　白い輪=中間形　金の輪=最終形　破線=守り</span></div></div></div><div>';
+  h+=G.phase==='end'?endCard():actionCard();
+  h+='<div class="card"><h3>風（たんぽぽ用）</h3><div class="row">'+windChip(G.windNow,'今ラウンド')+(G.fxWind?windChip(G.fxWind,'今手番の風（読んだ結果）'):'')+windChip(G.windNext,'次ラウンド')+'</div></div>';
+  h+=G.players.map(playerCard).join('');
+  h+='<div class="card"><h3>ログ</h3><div class="log">'+G.log.slice(-40).reverse().map(l=>'<div>R'+l.r+' '+l.t+'</div>').join('')+'</div></div></div></div>';
+  app.innerHTML=h;
+}
+function renderSetup(){
+  const s=ui.setup;const saved=loadSaved();
+  let h='<div class="top"><div class="ttl"><h1>植物陣取り テストプレイ台</h1><div class="sub">1台で全員分を操作するテストプレイ用です</div></div></div><div class="card"><h3>はじめての人へ：遊び方</h3><ul class="rules">'+HOWTO.map(t=>'<li>'+t+'</li>').join('')+'</ul></div><div class="card">';
+  h+='<fieldset><legend>人数</legend><div class="seg">'+[2,3,4].map(n=>'<button class="btn'+(s.n===n?' on':'')+'" data-a="np" data-v="'+n+'">'+n+'人</button>').join('')+'</div></fieldset>';
+  h+='<fieldset><legend>各席の植物</legend>';
+  if(!s.ai)s.ai=[];while(s.ai.length<s.n)s.ai.push(true);
+  for(let i=0;i<s.n;i++)h+='<label>P'+(i+1)+'<select data-seat="'+i+'">'+Object.values(PLANTS).map(p=>'<option value="'+p.id+'"'+(s.plants[i]===p.id?' selected':'')+'>'+p.n+'（'+p.t+'）</option>').join('')+'</select>'+
+    '<span class="seg" style="flex:none;width:auto"><button class="btn sm'+(!s.ai[i]?' on':'')+'" data-a="seatctl" data-v="'+i+':h">あなた</button><button class="btn sm'+(s.ai[i]?' on':'')+'" data-a="seatctl" data-v="'+i+':a">AI</button></span></label>';
+  h+='<div class="row" style="margin-top:6px">'+Object.keys(PLANTS).map(id=>'<span style="text-align:center;font-size:11px">'+plantArt(id,0,44)+plantArt(id,1,44)+plantArt(id,2,44)+'<br>'+PLANTS[id].n+'（初期・中間・最終）</span>').join('')+'</div></fieldset>';
+  const nf=(k,l,min,max)=>'<label>'+l+'<input type="number" min="'+min+'" max="'+max+'" value="'+s.cfg[k]+'" data-cfg="'+k+'"></label>';
+  h+='<fieldset><legend>土地の点数</legend>'+nf('land4','外周（中心から距離4）',0,5)+nf('land3','距離3',0,5)+nf('land2','距離2',0,6)+nf('land1','距離1',0,6)+nf('land0','中心',0,8)+'</fieldset>';
+  h+='<fieldset><legend>数値設定</legend>'+nf('target','勝利に必要な得点',3,30)+nf('nu0','初期栄養',0,10)+nf('flowers','開始時の花の数',1,3)+nf('grow1','成長コスト：種→芽',0,5)+nf('grow2','成長コスト：芽→花',0,6)+nf('drawInsect','虫カードを引くコスト',0,8)+nf('drawAnimal','動物カードを引くコスト',0,10)+nf('rangeInsect','虫カードの攻撃射程',1,6)+nf('rangeAnimal','動物カードの攻撃射程',1,6)+
+   nf('keepCost','枯れずに散布するコスト（カシ・ウツボカズラ・スミレの初期／中間）',0,4)+nf('evoFlowers1','進化：中間形に必要な花の数',1,8)+nf('evoCost1','進化：中間形のコスト（栄養）',0,10)+nf('evoFlowers2','進化：最終形に必要な花の数',1,10)+nf('evoCost2','進化：最終形のコスト（栄養）',0,12)+
+   nf('fxBalsam','固有効果コスト：ホウセンカ「弾ける」',0,5)+nf('fxDandelion','固有効果コスト：たんぽぽ「風を読む」',0,5)+nf('fxOakReroll','固有効果コスト：カシ「引き直し」',0,5)+nf('fxOakPick','固有効果コスト：カシ「選ぶ」',0,6)+nf('fxBamboo','固有効果コスト：タケノコ「急成長」',0,6)+nf('fxPred','固有効果コスト：ウツボカズラ「捕食」',0,6)+nf('fxTide','固有効果コスト：ココヤシ「潮に乗る」',0,5)+nf('fxNest','固有効果コスト：スミレ「アリの巣」',0,5)+nf('maxRounds','ラウンド上限',5,60)+
+   '<label><input type="checkbox" data-cfgb="witherSprout"'+(s.cfg.witherSprout!==false?' checked':'')+'>枯れる系の散布では、種が芽の状態で着地する</label><label><input type="checkbox" data-cfgb="randStart"'+(s.cfg.randStart?' checked':'')+'>スタートプレイヤーをランダムに決める</label></fieldset>';
+  h+='<button class="btn primary" style="width:100%" data-a="start">ゲーム開始</button>';
+  if(saved&&saved.phase==='play')h+='<button class="btn" style="width:100%;margin-top:8px" data-a="resume">前回の続きから（第'+saved.round+'ラウンド）</button>';
+  h+='</div><div class="card"><h3>この台での解釈（仮実装）</h3><ul class="rules">'+INTERP.map(t=>'<li>'+t+'</li>').join('')+'</ul></div>';
+  app.innerHTML=h;
+}
+function botTurn(pid){
+  const p=G.players[pid];
+  evolve(pid);
+  if(p.plant==='pitcher'&&!G.fxUsed){
+    const t=predTargets(p);
+    if(t.length&&p.nu>=fxc('pred',p)+2){t.sort((a,b)=>G.plants[b].stage-G.plants[a].stage);fxPredate(pid,t[0]);}
+  }
+  if(p.plant==='violet'&&!G.fxUsed){
+    const t=nestTargets(p);
+    if(t.length&&p.nu>=fxc('nest',p)+3){const s2=t.slice().sort((a,b)=>G.plants[b].stage-G.plants[a].stage);fxNest(pid,s2[0]);}
+  }
+  if(!G.acted){
+    const ft=fastTargets(p),gt=growTargets(p),fl=flowers(pid),mode=PLANTS[p.plant].mode;
+    const advancedGrow=gt.filter(k=>G.plants[k].stage===2);
+    if(ft.length&&p.nu>=fxc('bamboo',p)+2&&Math.random()<0.5){
+      grow(pid,ft[rnd(ft.length)],true);
+    }else if(advancedGrow.length){
+      grow(pid,advancedGrow[rnd(advancedGrow.length)]);
+    }else if(gt.length&&(fl.length<2||Math.random()<0.6)){
+      grow(pid,gt[rnd(gt.length)]);
+    }else if(fl.length>=(mode==='wither'?2:1)){
+      const cand=fl.slice().sort((a,b)=>dist(b,'0,0')-dist(a,'0,0'));
+      let started=false;
+      for(const c of cand){if(startDisperse(pid,c)===undefined){started=true;break;}}
+      if(started){
+        let steps=0;
+        while(G.pend&&steps++<12){
+          if(p.plant==='balsam'&&G.pend.boost<2&&p.nu>=fxc('balsam',p)+1)fxBalsam(pid);
+          if(p.plant==='oak'&&G.pend.placed===0&&!G.fxUsed&&p.nu>=fxc('reroll',p)+3&&Math.random()<0.3)fxOak(pid,'re');
+          if(p.plant==='coconut'&&G.pend.placed===0&&!G.pend.tide&&p.nu>=fxc('tide',p)+2&&Math.random()<0.4)fxTide(pid);
+          const o=pendOptions();if(!o.length)break;
+          o.sort((a,b)=>dist(a,'0,0')-dist(b,'0,0'));
+          placeDisperse(o[0]);
+        }
+        if(G.pend)finishDisperse();
+      }
+    }else if(gt.length){
+      grow(pid,gt[rnd(gt.length)]);
+    }
+  }
+  if(!G.drew){
+    const dI=drawCostOf('insect'),dA=drawCostOf('animal'),buf=3;
+    if(p.nu>=dA+buf&&Math.random()<0.35)drawCard(pid,'animal');
+    else if(p.nu>=dI+buf&&Math.random()<0.4)drawCard(pid,'insect');
+  }
+  for(let i=p.hand.length-1;i>=0;i--){
+    const id=p.hand[i],c=CARDS[id];
+    if(isAtk(id)){
+      const srcs=atkSources(pid,id);
+      if(srcs.length){
+        let best=null;
+        for(const s2 of srcs){const ts=cardTargets(pid,id,s2);for(const t of ts){const val=G.plants[t].stage;if(!best||val>best.val)best={s:s2,t,val};}}
+        if(best&&Math.random()<0.75)useCard(pid,i,best.t,best.s);
+      }
+    }else if(c.tg){
+      const ts=cardTargets(pid,id);
+      if(ts.length)useCard(pid,i,ts[rnd(ts.length)]);
+    }else{
+      useCard(pid,i,null);
+    }
+  }
+  endTurn(pid);
+}
+function autoRunBots(){
+  if(!G||G.phase!=='play'||!G.ai||!G.ai[G.turn])return;
+  let guard=0;
+  while(G.phase==='play'&&G.ai[G.turn]&&guard++<5000)botTurn(G.turn);
+}
+function render(){if(!G){renderSetup();return;}renderGame();save();}
+app.addEventListener('change',e=>{
+  const t=e.target;const s=ui.setup;
+  if(t.dataset.seat!==undefined){s.plants[+t.dataset.seat]=t.value;}
+  else if(t.dataset.cfg){s.cfg[t.dataset.cfg]=Math.max(+t.min,Math.min(+t.max,parseInt(t.value,10)||0));}
+  else if(t.dataset.cfgb){s.cfg[t.dataset.cfgb]=t.checked;}
+});
+app.addEventListener('click',e=>{
+  const cell=e.target.closest('[data-k]');
+  if(cell&&G){
+    const k=cell.dataset.k;const sel=getSel();
+    if(sel&&sel.cells.includes(k)){sel.onPick(k);return;}
+    ui.info=k;const inf=$('info');if(inf)inf.textContent=cellInfo(k);return;
+  }
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const a=b.dataset.a,v=b.dataset.v;
+  if(a==='np'){ui.setup.n=+v;const ai=ui.setup.ai||(ui.setup.ai=[]);while(ai.length<ui.setup.n)ai.push(true);renderSetup();}
+  else if(a==='seatctl'){const[i,m]=v.split(':');ui.setup.ai[+i]=(m==='a');renderSetup();}
+  else if(a==='start'){const s=ui.setup;newGame({plants:s.plants.slice(0,s.n),ai:s.ai,cfg:s.cfg});ui.hist=[];ui.sel=null;ui.info=null;autoRunBots();render();window.scrollTo(0,0);}
+  else if(a==='resume'){G=loadSaved();ui.hist=[];ui.sel=null;autoRunBots();render();}
+  else if(a==='new'){G=null;render();}
+  else if(a==='undo')undo();
+  else if(a==='menu')openSheet('メニュー',[
+    {label:'新しいゲーム',sub:'現在のゲームを終了して設定に戻ります',fn:()=>{if(confirm('現在のゲームを終了しますか？')){G=null;closeSheet();render();}}},
+    {label:'この台での解釈（仮実装）を見る',sub:'ルールの補完内容',fn:()=>openSheet('この台での解釈（仮実装）',[],'<ul class="rules">'+INTERP.map(t=>'<li>'+t+'</li>').join('')+'</ul>')}
+  ]);
+  else if(a==='cancel-sel'){ui.sel=null;render();}
+  else if(a==='grow'){const p=G.players[G.turn];pickCell('成長させる株を選ぶ（種か芽）',growTargets(p),k=>run(()=>grow(p.id,k)));}
+  else if(a==='disperse'){const p=G.players[G.turn];pickCell('種を飛ばす花を選ぶ（'+modeText(p)+'）',flowers(p.id),k=>run(()=>startDisperse(p.id,k)));}
+  else if(a==='evolve'){const p=G.players[G.turn];run(()=>evolve(p.id),()=>'「'+formOf(G.players[p.id]).n+'」に進化した！'+(G.players[p.id].form===2?'（最終形：形ボーナスが有効になります）':''));}
+  else if(a==='draw-insect')run(()=>drawCard(G.turn,'insect'));
+  else if(a==='draw-animal')run(()=>drawCard(G.turn,'animal'));
+  else if(a==='cards')onCards();
+  else if(a==='end-turn')run(()=>endTurn(G.turn));
+  else if(a==='finish-pend')run(()=>{finishDisperse();});
+  else if(a==='fx-balsam')run(()=>fxBalsam(G.turn));
+  else if(a==='fx-oak-re')run(()=>fxOak(G.turn,'re'));
+  else if(a==='fx-tide')run(()=>fxTide(G.turn));
+  else if(a==='fx-oak-pick'){const p=G.players[G.turn];const top=animalPeek(3);openSheet('山札の上3枚から選ぶ（栄養'+fxc('pick',p)+'）',top.map((id,i)=>({label:CARDS[id].n+'（歩数'+CARDS[id].steps+'）',sub:'選ばなかったカードは山札に残ります',fn:()=>run(()=>fxOak(p.id,'pick',i))})));}
+  else if(a==='fx')onFx();
+  else if(a==='ai-step'){autoRunBots();render();}
+});
+function onFx(){
+  const p=G.players[G.turn];
+  if(p.plant==='bamboo'){const t=fastTargets(p);pickCell('急成長させる種を選ぶ（栄養'+fxc('bamboo',p)+'）',t,k=>run(()=>grow(p.id,k,true)));}
+  else if(p.plant==='pitcher'){pickCell('捕食する相手の株を選ぶ（自分の株から'+(formOf(p).predRange||2)+'マス以内・栄養'+fxc('pred',p)+'）',predTargets(p),k=>run(()=>fxPredate(p.id,k)));}
+  else if(p.plant==='violet'){pickCell('守りを付ける自分の株を選ぶ（栄養'+fxc('nest',p)+'）',nestTargets(p),k=>run(()=>fxNest(p.id,k)));}
+  else if(p.plant==='dandelion'){
+    const w=effWind();
+    openSheet('風を読む（栄養'+fxc('dand',p)+'）',[
+      {label:'風の向きを時計回りに1つずらす',sub:'今：'+windText(w),disabled:w.str===0,fn:()=>run(()=>fxWindAdjust(p.id,'cw'))},
+      {label:'風の向きを反時計回りに1つずらす',sub:'今：'+windText(w),disabled:w.str===0,fn:()=>run(()=>fxWindAdjust(p.id,'ccw'))},
+      {label:'風の強さを+1する',sub:'今：'+windText(w),disabled:w.str>=3,fn:()=>run(()=>fxWindAdjust(p.id,'str'))}
+    ],'この手番の、自分の散布にだけ効きます。');
+  }
+}
+function onCards(){
+  const p=G.players[G.turn];
+  openSheet('カードを使う',p.hand.map((id,i)=>{
+    const c=CARDS[id];const atk=isAtk(id);
+    const dis=atk?atkSources(p.id,id).length===0:(c.tg?cardTargets(p.id,id).length===0:false);
+    return {label:c.n+'（'+c.kind+'）',sub:c.d+(atk?'　射程：自分の株から'+atkRange(id,p.id)+'マス以内'+(dis?'（今は届く相手なし）':''):''),disabled:dis,
+      fn:()=>{
+        if(atk)pickCell(c.n+'：攻撃の起点にする自分の株を選ぶ（射程'+atkRange(id,p.id)+'マス以内に相手の株がある株のみ）',atkSources(p.id,id),src=>{
+          pickCell(c.n+'：'+fmt(src)+'から'+atkRange(id,p.id)+'マス以内の相手の株を選ぶ',cardTargets(p.id,id,src),k=>run(()=>useCard(p.id,i,k,src)));
+        });
+        else if(c.tg)pickCell(c.n+'：対象の株を選ぶ',cardTargets(p.id,id),k=>run(()=>useCard(p.id,i,k)));
+        else run(()=>useCard(p.id,i,null));
+      }};
+  }));
+}
+render();
+</script>
+</body>
+</html>
