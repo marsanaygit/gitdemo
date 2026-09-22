@@ -511,7 +511,7 @@ function endTurn(pid){
 const $=id=>document.getElementById(id);
 const app=$('app');
 const SAVE='plantgame.v5';
-const ui={hist:[],sel:null,sheet:null,info:null,setup:null,toastT:null};
+const ui={hist:[],sel:null,sheet:null,info:null,setup:null,toastT:null,watch:true,aiSpeed:550,aiTimer:null,aiGen:null,aiPaused:false};
 function defaultSetup(){return {n:4,plants:['balsam','dandelion','oak','bamboo'],ai:[false,true,true,true],cfg:{target:10,nu0:2,flowers:2,grow1:0,grow2:0,drawInsect:3,drawAnimal:5,rangeInsect:1,rangeAnimal:2,keepCost:1,evoCost1:3,evoFlowers1:3,evoCost2:5,evoFlowers2:5,land4:1,land3:1,land2:2,land1:2,land0:3,fxBalsam:1,fxDandelion:1,fxOakReroll:1,fxOakPick:2,fxBamboo:2,fxPred:2,fxTide:1,fxNest:1,maxRounds:30,witherSprout:true,randStart:true}};}
 ui.setup=defaultSetup();
 function toast(t){const e=$('toast');e.textContent=t;e.hidden=false;clearTimeout(ui.toastT);ui.toastT=setTimeout(()=>{e.hidden=true;},3000);}
@@ -521,10 +521,10 @@ function run(fn,msg){
   const s=JSON.stringify(G);const r=fn();
   if(typeof r==='string'){toast(r);render();return false;}
   ui.hist.push(s);if(ui.hist.length>80)ui.hist.shift();
-  autoRunBots();
+  advanceAI();
   ui.sel=null;closeSheet();render();if(msg)toast(typeof msg==='function'?msg():msg);return true;
 }
-function undo(){if(!ui.hist.length){toast('戻せる操作がありません');return;}G=JSON.parse(ui.hist.pop());ui.sel=null;closeSheet();render();}
+function undo(){if(!ui.hist.length){toast('戻せる操作がありません');return;}stopAI();G=JSON.parse(ui.hist.pop());ui.sel=null;closeSheet();render();}
 function pickCell(prompt,cells,onPick){if(!cells.length){toast('対象にできるマスがありません');return;}ui.sel={cells,prompt,onPick};closeSheet();render();window.scrollTo({top:0,behavior:'smooth'});}
 function openSheet(title,items,note){ui.sheet={title,items,note};drawSheet();}
 function closeSheet(){ui.sheet=null;drawSheet();}
@@ -560,7 +560,10 @@ const HOWTO=[
  '自分の手番：①栄養が入る（花の数だけ）→②主行動を1回（成長させる／花から種を飛ばす）→③進化・固有効果・カード（好きなだけ）→④「手番を終える」。',
  '画面下のボタンを押して、盤面の光っている（オレンジ色の）マスをタップして選びます。間違えたら「元に戻す」。',
  '勝利条件：手番終了時に、自分の花がある土地の点数の合計（最終形なら並び方ボーナスも）が目標点（既定10）に達した人の勝ちです。',
- 'このアプリは1台の端末で全員分を順番に操作する、テストプレイ用です。'
+ 'このアプリは1台の端末で全員分を順番に操作する、テストプレイ用です。',
+ '最初の設定画面で、各プレイヤーを「あなた」か「AI」に切り替えられます。AIにした席は、簡単な判断ルールで自動的に手番を進めます（強いAIではなく、テストプレイ用の簡易な相手です）。',
+ '「AIの手番を1手ずつ見ながら進める」をオンにすると（既定オン）、AIの成長・散布・カード使用などが1手ずつ盤面に反映されながら進みます。手番の途中で「一時停止」「早送り」もできます。オフにすると、AIの手番は一瞬で終わります。',
+ '「元に戻す」を押すと、直前の自分の操作と、それに続くAIの手番をまとめて1回で取り消せます。'
 ];
 function windChip(w,label){
   const inner=w.str===0?'凪':'<svg viewBox="-12 -12 24 24" width="24" height="24" aria-hidden="true"><g transform="rotate('+DIRANG[w.dir]+')" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M-8 0H8M2 -6L8 0L2 6"/></g></svg>'+DIRN[w.dir]+' 強'+w.str;
@@ -679,7 +682,13 @@ function actionCard(){
   const s=ui.sel;
   if(s)return '<div class="card"><h2>マスを選んでください</h2><p>'+s.prompt+'</p><button class="btn" data-a="cancel-sel">キャンセル</button></div>';
   const p=G.players[G.turn];const P_=PLANTS[p.plant];const f=formOf(p);
-  if(G.ai&&G.ai[G.turn])return '<div class="card"><h2>AIの手番</h2><p>P'+(p.id+1)+'（'+f.n+'）が操作中です…</p><button class="btn primary" data-a="ai-step">進める</button></div>';
+  if(G.ai&&G.ai[G.turn]){
+    const running=!!ui.aiTimer,paused=ui.aiPaused;
+    let hh='<div class="card pc" style="--pc:'+P_.c+'"><div style="display:flex;gap:10px;align-items:center"><div style="flex:none">'+plantArt(p.plant,p.form,56)+'</div><div><h2>P'+(p.id+1)+' '+f.n+'（AI）の手番</h2><div class="row mut">'+(paused?'一時停止中':running?'考え中…':'…')+'</div></div></div><div class="row">';
+    if(ui.watch)hh+=(paused?'<button class="btn" data-a="ai-resume">再開</button>':'<button class="btn" data-a="ai-pause">一時停止</button>')+' <button class="btn" data-a="ai-skip-turn">早送り（この手番）</button> ';
+    hh+='<button class="btn" data-a="ai-skip-all">早送り（全部）</button></div></div>';
+    return hh;
+  }
   if(G.pend){
     const d=G.pend;
     return '<div class="card pc" style="--pc:'+P_.c+'"><h2>P'+(p.id+1)+' '+f.n+'：種を飛ばす</h2><div class="row">残りの種 <b>'+d.left+'</b>個'+(d.animal?'　運び手：<b>'+d.animal.n+'</b>（歩数'+d.animal.r+'）':'')+(d.plant==='dandelion'?'　風：'+windText(effWind()):'')+(d.plant==='coconut'?'　着地範囲：元の花から距離'+d.minDist+'以上':'')+(d.mode==='keep'?'　花は枯れていません':d.mode==='wither'?'　花は枯れました':'　花は芽に戻りました')+'</div><p>盤上のオレンジ色のマスをタップして、種を置きます。</p>'+
@@ -740,55 +749,58 @@ function renderSetup(){
    nf('keepCost','枯れずに散布するコスト（カシ・ウツボカズラ・スミレの初期／中間）',0,4)+nf('evoFlowers1','進化：中間形に必要な花の数',1,8)+nf('evoCost1','進化：中間形のコスト（栄養）',0,10)+nf('evoFlowers2','進化：最終形に必要な花の数',1,10)+nf('evoCost2','進化：最終形のコスト（栄養）',0,12)+
    nf('fxBalsam','固有効果コスト：ホウセンカ「弾ける」',0,5)+nf('fxDandelion','固有効果コスト：たんぽぽ「風を読む」',0,5)+nf('fxOakReroll','固有効果コスト：カシ「引き直し」',0,5)+nf('fxOakPick','固有効果コスト：カシ「選ぶ」',0,6)+nf('fxBamboo','固有効果コスト：タケノコ「急成長」',0,6)+nf('fxPred','固有効果コスト：ウツボカズラ「捕食」',0,6)+nf('fxTide','固有効果コスト：ココヤシ「潮に乗る」',0,5)+nf('fxNest','固有効果コスト：スミレ「アリの巣」',0,5)+nf('maxRounds','ラウンド上限',5,60)+
    '<label><input type="checkbox" data-cfgb="witherSprout"'+(s.cfg.witherSprout!==false?' checked':'')+'>枯れる系の散布では、種が芽の状態で着地する</label><label><input type="checkbox" data-cfgb="randStart"'+(s.cfg.randStart?' checked':'')+'>スタートプレイヤーをランダムに決める</label></fieldset>';
+  h+='<fieldset><legend>AI観戦</legend><label><input type="checkbox" data-ui="watch"'+(ui.watch?' checked':'')+'>AIの手番を1手ずつ見ながら進める（オフだと一瞬で終わらせます）</label><label>観戦スピード<select data-ui="speed"><option value="1000"'+(ui.aiSpeed===1000?' selected':'')+'>ゆっくり</option><option value="550"'+((ui.aiSpeed||550)===550?' selected':'')+'>ふつう</option><option value="200"'+(ui.aiSpeed===200?' selected':'')+'>速い</option></select></label></fieldset>';
   h+='<button class="btn primary" style="width:100%" data-a="start">ゲーム開始</button>';
   if(saved&&saved.phase==='play')h+='<button class="btn" style="width:100%;margin-top:8px" data-a="resume">前回の続きから（第'+saved.round+'ラウンド）</button>';
   h+='</div><div class="card"><h3>この台での解釈（仮実装）</h3><ul class="rules">'+INTERP.map(t=>'<li>'+t+'</li>').join('')+'</ul></div>';
   app.innerHTML=h;
 }
-function botTurn(pid){
+function* botTurnGen(pid){
   const p=G.players[pid];
-  evolve(pid);
+  if(evolve(pid)===undefined)yield;
   if(p.plant==='pitcher'&&!G.fxUsed){
     const t=predTargets(p);
-    if(t.length&&p.nu>=fxc('pred',p)+2){t.sort((a,b)=>G.plants[b].stage-G.plants[a].stage);fxPredate(pid,t[0]);}
+    if(t.length&&p.nu>=fxc('pred',p)+2){t.sort((a,b)=>G.plants[b].stage-G.plants[a].stage);if(fxPredate(pid,t[0])===undefined)yield;}
   }
   if(p.plant==='violet'&&!G.fxUsed){
     const t=nestTargets(p);
-    if(t.length&&p.nu>=fxc('nest',p)+3){const s2=t.slice().sort((a,b)=>G.plants[b].stage-G.plants[a].stage);fxNest(pid,s2[0]);}
+    if(t.length&&p.nu>=fxc('nest',p)+3){const s2=t.slice().sort((a,b)=>G.plants[b].stage-G.plants[a].stage);if(fxNest(pid,s2[0])===undefined)yield;}
   }
   if(!G.acted){
     const ft=fastTargets(p),gt=growTargets(p),fl=flowers(pid),mode=PLANTS[p.plant].mode;
     const advancedGrow=gt.filter(k=>G.plants[k].stage===2);
     if(ft.length&&p.nu>=fxc('bamboo',p)+2&&Math.random()<0.5){
-      grow(pid,ft[rnd(ft.length)],true);
+      if(grow(pid,ft[rnd(ft.length)],true)===undefined)yield;
     }else if(advancedGrow.length){
-      grow(pid,advancedGrow[rnd(advancedGrow.length)]);
+      if(grow(pid,advancedGrow[rnd(advancedGrow.length)])===undefined)yield;
     }else if(gt.length&&(fl.length<2||Math.random()<0.6)){
-      grow(pid,gt[rnd(gt.length)]);
+      if(grow(pid,gt[rnd(gt.length)])===undefined)yield;
     }else if(fl.length>=(mode==='wither'?2:1)){
       const cand=fl.slice().sort((a,b)=>dist(b,'0,0')-dist(a,'0,0'));
       let started=false;
       for(const c of cand){if(startDisperse(pid,c)===undefined){started=true;break;}}
       if(started){
+        yield;
         let steps=0;
         while(G.pend&&steps++<12){
-          if(p.plant==='balsam'&&G.pend.boost<2&&p.nu>=fxc('balsam',p)+1)fxBalsam(pid);
-          if(p.plant==='oak'&&G.pend.placed===0&&!G.fxUsed&&p.nu>=fxc('reroll',p)+3&&Math.random()<0.3)fxOak(pid,'re');
-          if(p.plant==='coconut'&&G.pend.placed===0&&!G.pend.tide&&p.nu>=fxc('tide',p)+2&&Math.random()<0.4)fxTide(pid);
+          if(p.plant==='balsam'&&G.pend.boost<2&&p.nu>=fxc('balsam',p)+1){if(fxBalsam(pid)===undefined)yield;}
+          if(p.plant==='oak'&&G.pend.placed===0&&!G.fxUsed&&p.nu>=fxc('reroll',p)+3&&Math.random()<0.3){if(fxOak(pid,'re')===undefined)yield;}
+          if(p.plant==='coconut'&&G.pend.placed===0&&!G.pend.tide&&p.nu>=fxc('tide',p)+2&&Math.random()<0.4){if(fxTide(pid)===undefined)yield;}
           const o=pendOptions();if(!o.length)break;
           o.sort((a,b)=>dist(a,'0,0')-dist(b,'0,0'));
           placeDisperse(o[0]);
+          yield;
         }
         if(G.pend)finishDisperse();
       }
     }else if(gt.length){
-      grow(pid,gt[rnd(gt.length)]);
+      if(grow(pid,gt[rnd(gt.length)])===undefined)yield;
     }
   }
   if(!G.drew){
     const dI=drawCostOf('insect'),dA=drawCostOf('animal'),buf=3;
-    if(p.nu>=dA+buf&&Math.random()<0.35)drawCard(pid,'animal');
-    else if(p.nu>=dI+buf&&Math.random()<0.4)drawCard(pid,'insect');
+    if(p.nu>=dA+buf&&Math.random()<0.35){if(drawCard(pid,'animal')===undefined)yield;}
+    else if(p.nu>=dI+buf&&Math.random()<0.4){if(drawCard(pid,'insect')===undefined)yield;}
   }
   for(let i=p.hand.length-1;i>=0;i--){
     const id=p.hand[i],c=CARDS[id];
@@ -797,21 +809,58 @@ function botTurn(pid){
       if(srcs.length){
         let best=null;
         for(const s2 of srcs){const ts=cardTargets(pid,id,s2);for(const t of ts){const val=G.plants[t].stage;if(!best||val>best.val)best={s:s2,t,val};}}
-        if(best&&Math.random()<0.75)useCard(pid,i,best.t,best.s);
+        if(best&&Math.random()<0.75){if(useCard(pid,i,best.t,best.s)===undefined)yield;}
       }
     }else if(c.tg){
       const ts=cardTargets(pid,id);
-      if(ts.length)useCard(pid,i,ts[rnd(ts.length)]);
+      if(ts.length){if(useCard(pid,i,ts[rnd(ts.length)])===undefined)yield;}
     }else{
-      useCard(pid,i,null);
+      if(useCard(pid,i,null)===undefined)yield;
     }
   }
   endTurn(pid);
+  yield;
 }
+function botTurn(pid){const g=botTurnGen(pid);let r=g.next();while(!r.done)r=g.next();}
 function autoRunBots(){
   if(!G||G.phase!=='play'||!G.ai||!G.ai[G.turn])return;
   let guard=0;
   while(G.phase==='play'&&G.ai[G.turn]&&guard++<5000)botTurn(G.turn);
+}
+function stopAI(){if(ui.aiTimer){clearTimeout(ui.aiTimer);ui.aiTimer=null;}ui.aiGen=null;ui.aiPaused=false;}
+function scheduleWatch(){if(ui.aiPaused)return;ui.aiTimer=setTimeout(watchStep,ui.aiSpeed||550);}
+function watchStep(){
+  ui.aiTimer=null;
+  if(!G||G.phase!=='play'||!G.ai||!G.ai[G.turn]){stopAI();render();return;}
+  if(!ui.aiGen)ui.aiGen=botTurnGen(G.turn);
+  const r=ui.aiGen.next();
+  render();
+  if(r.done){ui.aiGen=null;if(G.phase==='play'&&G.ai[G.turn])scheduleWatch();}
+  else scheduleWatch();
+}
+function startWatch(){
+  if(!G||G.phase!=='play'||!G.ai||!G.ai[G.turn])return;
+  if(ui.aiTimer||ui.aiGen)return;
+  ui.aiPaused=false;scheduleWatch();
+}
+function advanceAI(){
+  if(!G||G.phase!=='play'||!G.ai||!G.ai[G.turn])return;
+  if(ui.watch)startWatch();else autoRunBots();
+}
+function aiPause(){ui.aiPaused=true;if(ui.aiTimer){clearTimeout(ui.aiTimer);ui.aiTimer=null;}}
+function aiResumeWatch(){ui.aiPaused=false;scheduleWatch();}
+function aiSkipTurn(){
+  if(ui.aiTimer){clearTimeout(ui.aiTimer);ui.aiTimer=null;}
+  if(!ui.aiGen&&G.ai[G.turn])ui.aiGen=botTurnGen(G.turn);
+  while(ui.aiGen){const r=ui.aiGen.next();if(r.done){ui.aiGen=null;break;}}
+  ui.aiPaused=false;
+  if(G.phase==='play'&&G.ai[G.turn]){if(ui.watch)scheduleWatch();else autoRunBots();}
+}
+function aiSkipAll(){
+  if(ui.aiTimer){clearTimeout(ui.aiTimer);ui.aiTimer=null;}
+  if(ui.aiGen){while(ui.aiGen){const r=ui.aiGen.next();if(r.done){ui.aiGen=null;break;}}}
+  ui.aiPaused=false;
+  autoRunBots();
 }
 function render(){if(!G){renderSetup();return;}renderGame();save();}
 app.addEventListener('change',e=>{
@@ -819,6 +868,8 @@ app.addEventListener('change',e=>{
   if(t.dataset.seat!==undefined){s.plants[+t.dataset.seat]=t.value;}
   else if(t.dataset.cfg){s.cfg[t.dataset.cfg]=Math.max(+t.min,Math.min(+t.max,parseInt(t.value,10)||0));}
   else if(t.dataset.cfgb){s.cfg[t.dataset.cfgb]=t.checked;}
+  else if(t.dataset.ui==='watch'){ui.watch=t.checked;}
+  else if(t.dataset.ui==='speed'){ui.aiSpeed=+t.value;}
 });
 app.addEventListener('click',e=>{
   const cell=e.target.closest('[data-k]');
@@ -831,12 +882,13 @@ app.addEventListener('click',e=>{
   const a=b.dataset.a,v=b.dataset.v;
   if(a==='np'){ui.setup.n=+v;const ai=ui.setup.ai||(ui.setup.ai=[]);while(ai.length<ui.setup.n)ai.push(true);renderSetup();}
   else if(a==='seatctl'){const[i,m]=v.split(':');ui.setup.ai[+i]=(m==='a');renderSetup();}
-  else if(a==='start'){const s=ui.setup;newGame({plants:s.plants.slice(0,s.n),ai:s.ai,cfg:s.cfg});ui.hist=[];ui.sel=null;ui.info=null;autoRunBots();render();window.scrollTo(0,0);}
-  else if(a==='resume'){G=loadSaved();ui.hist=[];ui.sel=null;autoRunBots();render();}
+  else if(a==='start'){stopAI();const s=ui.setup;newGame({plants:s.plants.slice(0,s.n),ai:s.ai,cfg:s.cfg});ui.hist=[];ui.sel=null;ui.info=null;advanceAI();render();window.scrollTo(0,0);}
+  else if(a==='resume'){stopAI();G=loadSaved();ui.hist=[];ui.sel=null;advanceAI();render();}
   else if(a==='new'){G=null;render();}
   else if(a==='undo')undo();
   else if(a==='menu')openSheet('メニュー',[
-    {label:'新しいゲーム',sub:'現在のゲームを終了して設定に戻ります',fn:()=>{if(confirm('現在のゲームを終了しますか？')){G=null;closeSheet();render();}}},
+    {label:'新しいゲーム',sub:'現在のゲームを終了して設定に戻ります',fn:()=>{if(confirm('現在のゲームを終了しますか？')){stopAI();G=null;closeSheet();render();}}},
+    {label:(ui.watch?'AI観戦をオフにする':'AI観戦をオンにする'),sub:'次にAIの手番になったときから反映されます',fn:()=>{ui.watch=!ui.watch;closeSheet();render();}},
     {label:'この台での解釈（仮実装）を見る',sub:'ルールの補完内容',fn:()=>openSheet('この台での解釈（仮実装）',[],'<ul class="rules">'+INTERP.map(t=>'<li>'+t+'</li>').join('')+'</ul>')}
   ]);
   else if(a==='cancel-sel'){ui.sel=null;render();}
@@ -853,7 +905,10 @@ app.addEventListener('click',e=>{
   else if(a==='fx-tide')run(()=>fxTide(G.turn));
   else if(a==='fx-oak-pick'){const p=G.players[G.turn];const top=animalPeek(3);openSheet('山札の上3枚から選ぶ（栄養'+fxc('pick',p)+'）',top.map((id,i)=>({label:CARDS[id].n+'（歩数'+CARDS[id].steps+'）',sub:'選ばなかったカードは山札に残ります',fn:()=>run(()=>fxOak(p.id,'pick',i))})));}
   else if(a==='fx')onFx();
-  else if(a==='ai-step'){autoRunBots();render();}
+  else if(a==='ai-pause'){aiPause();render();}
+  else if(a==='ai-resume'){aiResumeWatch();render();}
+  else if(a==='ai-skip-turn'){aiSkipTurn();render();}
+  else if(a==='ai-skip-all'){aiSkipAll();render();}
 });
 function onFx(){
   const p=G.players[G.turn];
